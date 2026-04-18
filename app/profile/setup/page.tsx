@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation"
 
-import { LogoutButton } from "@/components/logout-button"
 import { createClient } from "@/lib/supabase/server"
+import { ProfileSetupForm } from "@/components/profile-setup-form"
 
-export default async function ProtectedPage() {
+export default async function ProfileSetupPage() {
   const supabase = await createClient()
 
   const {
@@ -17,7 +17,7 @@ export default async function ProtectedPage() {
 
   const { data: profile, error: profileError } = await supabase
     .from("users")
-    .select("id, user_name")
+    .select("id")
     .eq("id", user.id)
     .maybeSingle()
 
@@ -26,16 +26,15 @@ export default async function ProtectedPage() {
     redirect("/auth/login")
   }
 
-  if (!profile) {
-    redirect("/profile/setup")
+  if (profile) {
+    redirect("/protected")
   }
 
   return (
-    <div className="flex h-svh w-full items-center justify-center gap-2">
-      <p>
-        Hello <span>{profile.user_name ?? user.email}</span>
-      </p>
-      <LogoutButton />
+    <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
+      <div className="flex w-full max-w-lg flex-col gap-6">
+        <ProfileSetupForm email={user.email ?? null} />
+      </div>
     </div>
   )
 }
