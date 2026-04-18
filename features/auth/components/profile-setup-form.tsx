@@ -62,10 +62,8 @@ export function ProfileSetupForm() {
     <div className="flex min-h-[60vh] items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
       <Card className="w-full max-w-lg">
         <CardHeader>
-          <CardTitle>
-            Welcome to Dispo! Let&apos;s make some memories.
-          </CardTitle>
-          <CardDescription>But first, tell us your name.</CardDescription>
+          <CardTitle>Welcome to Candid! Ready to make some memories?</CardTitle>
+          <CardDescription>First, tell us your name.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
