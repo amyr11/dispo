@@ -37,7 +37,7 @@ export function LoginForm({
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
-        router.push("/protected")
+        router.push("/dashboard")
       }
     })
 
@@ -60,7 +60,7 @@ export function LoginForm({
         return
       }
 
-      router.push("/protected")
+      router.push("/dashboard")
     } catch (err) {
       setError("An unexpected error occurred")
       console.error(err)

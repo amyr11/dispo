@@ -52,7 +52,7 @@ export function ProfileSetupForm() {
         return
       }
 
-      router.push("/protected")
+      router.push("/dashboard")
     } finally {
       setIsLoading(false)
     }
