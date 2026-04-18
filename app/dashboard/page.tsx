@@ -1,34 +1,8 @@
-import { redirect } from "next/navigation"
-
 import { LogoutButton } from "@/features/auth/components/logout-button"
-import { createClient } from "@/lib/supabase/server"
+import { requireAuth } from "@/features/auth/services/auth-utils"
 
-export default async function ProtectedPage() {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser()
-
-  if (userError || !user) {
-    redirect("/auth/login")
-  }
-
-  const { data: profile, error: profileError } = await supabase
-    .from("users")
-    .select("id, user_name")
-    .eq("id", user.id)
-    .maybeSingle()
-
-  if (profileError) {
-    console.error(profileError)
-    redirect("/auth/login")
-  }
-
-  if (!profile) {
-    redirect("/profile/setup")
-  }
+export default async function Dashboard() {
+  const { user, profile } = await requireAuth()
 
   return (
     <div className="flex h-svh w-full items-center justify-center gap-2">

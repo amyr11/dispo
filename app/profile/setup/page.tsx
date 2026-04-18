@@ -27,7 +27,7 @@ export default async function ProfileSetupPage() {
   }
 
   if (profile) {
-    redirect("/protected")
+    redirect("/dashboard")
   }
 
   return (
