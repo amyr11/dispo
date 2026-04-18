@@ -1,6 +1,6 @@
 "use client"
 
-import { LoginForm } from "@/components/login-form"
+import { LoginForm } from "@/features/auth/components/login-form"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { CameraSmile01Icon } from "@hugeicons/core-free-icons"
 

@@ -1,7 +1,7 @@
 import { Geist_Mono, IBM_Plex_Sans, Noto_Serif } from "next/font/google"
 
 import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeProvider } from "@/features/auth/components/theme-provider"
 import { cn } from "@/lib/utils"
 
 const notoSerifHeading = Noto_Serif({

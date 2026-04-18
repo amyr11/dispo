@@ -13,13 +13,8 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 
-interface ProfileSetupFormProps {
-  email: string | null
-}
-
-export function ProfileSetupForm({ email }: ProfileSetupFormProps) {
+export function ProfileSetupForm() {
   const [name, setName] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -67,7 +62,9 @@ export function ProfileSetupForm({ email }: ProfileSetupFormProps) {
     <div className="flex min-h-[60vh] items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
       <Card className="w-full max-w-lg">
         <CardHeader>
-          <CardTitle>Welcome to Dispo! Let's make some memories.</CardTitle>
+          <CardTitle>
+            Welcome to Dispo! Let&apos;s make some memories.
+          </CardTitle>
           <CardDescription>But first, tell us your name.</CardDescription>
         </CardHeader>
         <CardContent>

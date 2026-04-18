@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation"
 
 import { createClient } from "@/lib/supabase/server"
-import { ProfileSetupForm } from "@/components/profile-setup-form"
+import { ProfileSetupForm } from "@/features/auth/components/profile-setup-form"
 
 export default async function ProfileSetupPage() {
   const supabase = await createClient()
