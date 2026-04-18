@@ -76,6 +76,10 @@ export function LoginForm({
     try {
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: "google",
+        options: {
+          // This ensures the user is sent back to /dashboard specifically
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
       })
 
       if (signInError) {
