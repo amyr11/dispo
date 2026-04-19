@@ -1,6 +1,15 @@
 export type Event = {
+  id: number
+  ownerId: string
+  createdAt: number
   eventName: string
-  eventDate: string
-  maxAttendees: number
+  eventStart: string
+  revealAt: string
+  attendeeLimit: number
   photoLimit: number
+  passwordHash: string
+}
+
+export type CreateEventInput = Omit<Event, 'id' | 'ownerId' | 'createdAt' | 'revealAt' | 'passwordHash'> & {
+  password: string
 }

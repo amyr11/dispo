@@ -165,6 +165,24 @@ function AlertDialogAction({
   )
 }
 
+function AlertDialogDesctructiveAction({
+  className,
+  variant = "destructive",
+  size = "default",
+  ...props
+}: React.ComponentProps<typeof AlertDialogPrimitive.Action> &
+  Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
+  return (
+    <Button variant={variant} size={size} asChild>
+      <AlertDialogPrimitive.Action
+        data-slot="alert-dialog-destructive-action"
+        className={cn(className)}
+        {...props}
+      />
+    </Button>
+  )
+}
+
 function AlertDialogCancel({
   className,
   variant = "outline",
@@ -186,6 +204,7 @@ function AlertDialogCancel({
 export {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogDesctructiveAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,

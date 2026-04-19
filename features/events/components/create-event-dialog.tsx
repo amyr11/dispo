@@ -13,10 +13,10 @@ import {
 } from "@/components/ui/dialog"
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
+  AlertDialogDesctructiveAction,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -24,46 +24,44 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createEvent } from "@/features/events/services/events-util"
-import { Event } from "@/features/events/types/event-types"
+import { CreateEventInput } from "@/features/events/types/event-types"
 import {
   DEFAULT_MAX_ATTENDEES,
   DEFAULT_MAX_PHOTO_LIMIT,
 } from "../constants/event-constants"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
-const EMPTY_FORM: Event = {
+const EMPTY_FORM: CreateEventInput = {
   eventName: "",
-  eventDate: "",
-  maxAttendees: DEFAULT_MAX_ATTENDEES,
+  eventStart: "",
+  attendeeLimit: DEFAULT_MAX_ATTENDEES,
   photoLimit: DEFAULT_MAX_PHOTO_LIMIT,
+  password: "",
 }
 
-type FormErrors = Partial<Record<keyof Event, string>>
+type FormErrors = Partial<Record<keyof CreateEventInput, string>>
 
-function isDirty(form: Event) {
+function isDirty(form: CreateEventInput) {
   return (
     form.eventName !== "" ||
-    form.eventDate !== "" ||
-    form.maxAttendees !== DEFAULT_MAX_ATTENDEES ||
-    form.photoLimit !== DEFAULT_MAX_PHOTO_LIMIT
+    form.eventStart !== "" ||
+    form.attendeeLimit !== DEFAULT_MAX_ATTENDEES ||
+    form.photoLimit !== DEFAULT_MAX_PHOTO_LIMIT ||
+    form.password !== ""
   )
 }
 
-function validate(form: Event): FormErrors {
+function validate(form: CreateEventInput): FormErrors {
   const errors: FormErrors = {}
 
-  if (!form.eventName.trim()) {
-    errors.eventName = "Event name is required."
-  }
+  if (!form.eventName.trim()) errors.eventName = "Event name is required."
+  if (!form.eventStart) errors.eventStart = "Event date is required."
+  if (!form.password) errors.password = "Password is required."
 
-  if (!form.eventDate) {
-    errors.eventDate = "Event date is required."
-  }
-
-  if (!form.maxAttendees || form.maxAttendees <= 0) {
-    errors.maxAttendees = "Must be at least 1."
-  } else if (form.maxAttendees > DEFAULT_MAX_ATTENDEES) {
-    errors.maxAttendees = `Cannot exceed ${DEFAULT_MAX_ATTENDEES}.`
+  if (!form.attendeeLimit || form.attendeeLimit <= 0) {
+    errors.attendeeLimit = "Must be at least 1."
+  } else if (form.attendeeLimit > DEFAULT_MAX_ATTENDEES) {
+    errors.attendeeLimit = `Cannot exceed ${DEFAULT_MAX_ATTENDEES}.`
   }
 
   if (!form.photoLimit || form.photoLimit <= 0) {
@@ -78,13 +76,13 @@ function validate(form: Event): FormErrors {
 export function CreateEventDialog() {
   const [open, setOpen] = useState(false)
   const [confirmClose, setConfirmClose] = useState(false)
-  const [form, setForm] = useState<Event>(EMPTY_FORM)
+  const [form, setForm] = useState<CreateEventInput>(EMPTY_FORM)
   const [errors, setErrors] = useState<FormErrors>({})
 
   const queryClient = useQueryClient()
 
   const mutation = useMutation({
-    mutationFn: (event: Event) => Promise.resolve(createEvent(event)),
+    mutationFn: (input: CreateEventInput) => createEvent(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] })
       setOpen(false)
@@ -96,16 +94,15 @@ export function CreateEventDialog() {
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target
     const parsed =
-      name === "maxAttendees" || name === "photoLimit" ? Number(value) : value
+      name === "attendeeLimit" || name === "photoLimit" ? Number(value) : value
 
     const updated = { ...form, [name]: parsed }
     setForm(updated)
 
-    // Validate only the changed field immediately
     const fieldErrors = validate(updated)
     setErrors((prev) => ({
       ...prev,
-      [name]: fieldErrors[name as keyof Event],
+      [name]: fieldErrors[name as keyof CreateEventInput],
     }))
   }
 
@@ -165,29 +162,29 @@ export function CreateEventDialog() {
             <div className="flex flex-col gap-1">
               <Label>Event Date</Label>
               <Input
-                name="eventDate"
+                name="eventStart"
                 type="date"
-                value={form.eventDate}
+                value={form.eventStart}
                 onChange={handleChange}
               />
-              {errors.eventDate && (
-                <p className="text-sm text-destructive">{errors.eventDate}</p>
+              {errors.eventStart && (
+                <p className="text-sm text-destructive">{errors.eventStart}</p>
               )}
             </div>
 
             <div className="flex flex-col gap-1">
               <Label>Max Attendees</Label>
               <Input
-                name="maxAttendees"
+                name="attendeeLimit"
                 type="number"
-                defaultValue={form.maxAttendees}
+                defaultValue={form.attendeeLimit}
                 onChange={handleChange}
                 min={1}
                 max={DEFAULT_MAX_ATTENDEES}
               />
-              {errors.maxAttendees && (
+              {errors.attendeeLimit && (
                 <p className="text-sm text-destructive">
-                  {errors.maxAttendees}
+                  {errors.attendeeLimit}
                 </p>
               )}
             </div>
@@ -204,6 +201,18 @@ export function CreateEventDialog() {
               />
               {errors.photoLimit && (
                 <p className="text-sm text-destructive">{errors.photoLimit}</p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <Label>Event password</Label>
+              <Input
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+              />
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password}</p>
               )}
             </div>
 
@@ -224,10 +233,10 @@ export function CreateEventDialog() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep editing</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmClose}>
-              Discard
-            </AlertDialogAction>
+            <AlertDialogCancel>No, I&apos;ll keep editing</AlertDialogCancel>
+            <AlertDialogDesctructiveAction onClick={handleConfirmClose}>
+              Yes, discard them
+            </AlertDialogDesctructiveAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

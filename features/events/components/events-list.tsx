@@ -16,6 +16,11 @@ export function EventsList() {
     queryFn: getEvents,
   })
 
+  const sortedEvents = [...eventsList].sort(
+    (a, b) =>
+      new Date(a.eventStart).getTime() - new Date(b.eventStart).getTime()
+  )
+
   if (eventsList.length === 0) {
     return (
       <p className="mt-4 text-center text-muted-foreground">
@@ -26,14 +31,14 @@ export function EventsList() {
 
   return (
     <div className="mt-4 flex flex-col gap-3">
-      {eventsList.map((event) => (
+      {sortedEvents.map((event) => (
         <Card
-          key={event.eventName}
+          key={event.id}
           className="cursor-pointer transition-all active:scale-95"
         >
           <CardHeader>
             <CardTitle>{event.eventName}</CardTitle>
-            <CardDescription>{formatDate(event.eventDate)}</CardDescription>
+            <CardDescription>{formatDate(event.eventStart)}</CardDescription>
           </CardHeader>
         </Card>
       ))}
