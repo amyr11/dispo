@@ -29,6 +29,7 @@ import {
   DEFAULT_MAX_ATTENDEES,
   DEFAULT_MAX_PHOTO_LIMIT,
 } from "../constants/event-constants"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 const EMPTY_FORM: Event = {
   eventName: "",
@@ -80,6 +81,18 @@ export function CreateEventDialog() {
   const [form, setForm] = useState<Event>(EMPTY_FORM)
   const [errors, setErrors] = useState<FormErrors>({})
 
+  const queryClient = useQueryClient()
+
+  const mutation = useMutation({
+    mutationFn: (event: Event) => Promise.resolve(createEvent(event)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["events"] })
+      setOpen(false)
+      setForm(EMPTY_FORM)
+      setErrors({})
+    },
+  })
+
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target
     const parsed =
@@ -102,10 +115,7 @@ export function CreateEventDialog() {
       setErrors(validationErrors)
       return
     }
-    createEvent(form)
-    setOpen(false)
-    setForm(EMPTY_FORM)
-    setErrors({})
+    mutation.mutate(form)
   }
 
   function handleOpenChange(next: boolean) {
@@ -197,7 +207,9 @@ export function CreateEventDialog() {
               )}
             </div>
 
-            <Button onClick={handleSubmit}>Create</Button>
+            <Button onClick={handleSubmit} disabled={mutation.isPending}>
+              {mutation.isPending ? "Creating..." : "Create"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -1,0 +1,41 @@
+"use client"
+
+import { useQuery } from "@tanstack/react-query"
+import { getEvents } from "@/features/events/services/events-util"
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+
+export function EventsList() {
+  const { data: eventsList = [] } = useQuery({
+    queryKey: ["events"],
+    queryFn: getEvents,
+  })
+
+  if (eventsList.length === 0) {
+    return (
+      <p className="mt-4 text-center text-muted-foreground">
+        It&apos;s quiet here 💤.
+      </p>
+    )
+  }
+
+  return (
+    <div className="mt-4 flex flex-col gap-3">
+      {eventsList.map((event) => (
+        <Card
+          key={event.eventName}
+          className="cursor-pointer transition-all active:scale-95"
+        >
+          <CardHeader>
+            <CardTitle>{event.eventName}</CardTitle>
+            <CardDescription>{event.eventDate}</CardDescription>
+          </CardHeader>
+        </Card>
+      ))}
+    </div>
+  )
+}

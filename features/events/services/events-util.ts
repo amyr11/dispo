@@ -16,7 +16,7 @@ const eventsList: Event[] = [
 ]
 
 export function getEvents(): Event[] {
-  return eventsList
+  return [...eventsList]
 }
 
 export function createEvent(event: Event): Event {
