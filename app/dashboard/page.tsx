@@ -15,7 +15,7 @@ export default async function Dashboard() {
         </div>
         <div className="w-full max-w-lg px-4">
           <div className="mt-14 flex justify-center">
-            <div className="my-8 flex flex-col gap-2 py-4 text-center">
+            <div className="my-8 flex flex-col gap-2 py-12 text-center">
               <p className="font-heading text-4xl">
                 Hi, <span className="font-bold">{profile?.user_name}</span>
               </p>

@@ -16,7 +16,7 @@ export function NavbarWrapper({ children }: { children: React.ReactNode }) {
     <nav
       className={`fixed top-0 right-0 left-0 z-10 transition-all duration-300 ${
         scrolled
-          ? "border-b-1 bg-muted/70 opacity-100 backdrop-blur-md"
+          ? "border-b bg-muted/70 opacity-100 backdrop-blur-sm"
           : "bg-transparent opacity-100 backdrop-blur-none"
       }`}
     >
