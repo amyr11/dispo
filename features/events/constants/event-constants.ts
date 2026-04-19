@@ -1,0 +1,2 @@
+export const DEFAULT_MAX_ATTENDEES = 80
+export const DEFAULT_MAX_PHOTO_LIMIT = 5
