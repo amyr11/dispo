@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { formatDate } from "@/lib/utils/date-utils"
 
 export function EventsList() {
   const { data: eventsList = [] } = useQuery({
@@ -32,7 +33,7 @@ export function EventsList() {
         >
           <CardHeader>
             <CardTitle>{event.eventName}</CardTitle>
-            <CardDescription>{event.eventDate}</CardDescription>
+            <CardDescription>{formatDate(event.eventDate)}</CardDescription>
           </CardHeader>
         </Card>
       ))}

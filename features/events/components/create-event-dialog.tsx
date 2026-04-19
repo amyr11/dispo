@@ -180,7 +180,7 @@ export function CreateEventDialog() {
               <Input
                 name="maxAttendees"
                 type="number"
-                value={form.maxAttendees}
+                defaultValue={form.maxAttendees}
                 onChange={handleChange}
                 min={1}
                 max={DEFAULT_MAX_ATTENDEES}
@@ -197,7 +197,7 @@ export function CreateEventDialog() {
               <Input
                 name="photoLimit"
                 type="number"
-                value={form.photoLimit}
+                defaultValue={form.photoLimit}
                 onChange={handleChange}
                 min={1}
                 max={DEFAULT_MAX_PHOTO_LIMIT}
