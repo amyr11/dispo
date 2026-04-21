@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card"
 import { formatDate } from "@/lib/utils/date-utils"
 import Link from "next/link"
+import EventBadge from "./event-badge"
 
 export function EventsList() {
   const { data: eventsList = [] } = useQuery({
@@ -36,7 +37,8 @@ export function EventsList() {
         <Link href={`/dashboard/${event.id}`} key={event.id}>
           <Card className="cursor-pointer transition-all active:scale-95">
             <CardHeader>
-              <CardTitle>{event.eventName}</CardTitle>
+              <EventBadge eventStart={event.eventStart} />
+              <CardTitle className="mt-2 text-lg">{event.eventName}</CardTitle>
               <CardDescription>{formatDate(event.eventStart)}</CardDescription>
             </CardHeader>
           </Card>

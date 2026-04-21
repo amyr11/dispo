@@ -8,10 +8,8 @@ export default async function Dashboard() {
 
   return (
     <div className="flex flex-col items-center justify-center">
-      <div className="sticky top-0 z-50 w-full max-w-lg bg-muted">
-        <Navbar />
-      </div>
-      <div className="mt-20 w-full max-w-lg px-4">
+      <Navbar />
+      <div className="mt-20 w-full max-w-lg px-4 sm:max-w-2xl">
         <div className="flex justify-center">
           <div className="my-8 flex flex-col gap-2 py-12 text-center">
             <p className="font-heading text-4xl">

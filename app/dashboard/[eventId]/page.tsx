@@ -23,10 +23,8 @@ export default async function Dashboard({
   return (
     <ReactQueryProvider>
       <div className="flex flex-col items-center justify-center">
-        <div className="sticky top-0 z-50 w-full max-w-lg bg-muted">
-          <Navbar />
-        </div>
-        <div className="mt-28 flex w-full max-w-lg flex-col gap-8 px-4">
+        <Navbar />
+        <div className="mt-20 flex w-full max-w-lg flex-col gap-8 px-4 sm:max-w-2xl">
           {/* Top row: back button + action buttons */}
           <div className="flex items-center justify-between">
             <Link href="/dashboard">

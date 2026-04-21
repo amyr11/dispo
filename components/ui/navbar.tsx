@@ -12,7 +12,7 @@ export async function Navbar() {
 
   return (
     <NavbarWrapper>
-      <div className="mx-auto my-2 flex h-14 max-w-lg items-center justify-between px-4">
+      <div className="mx-auto my-2 flex h-14 max-w-lg items-center justify-between px-4 sm:max-w-2xl">
         <a href="#" className="flex items-center gap-2 font-medium">
           <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <HugeiconsIcon
