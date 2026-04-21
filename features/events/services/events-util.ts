@@ -12,7 +12,7 @@ export async function getEvents(): Promise<Event[]> {
   const { data, error } = await supabase
     .from("events")
     .select("*")
-    .eq("ownerId", user.id)
+    .eq("user_id", user.id)
 
   if (error) throw new Error(error.message)
   return data ?? []
@@ -28,7 +28,7 @@ export async function getEvent(eventId: string): Promise<Event> {
     .from("events")
     .select("*")
     .eq("id", eventId)
-    .eq("ownerId", user.id)
+    .eq("user_id", user.id)
     .single()
 
   if (error) throw new Error(error.message)
@@ -53,7 +53,7 @@ export async function createEvent(input: CreateEventInput): Promise<Event> {
     eventStart: input.eventStart,
     attendeeLimit: input.attendeeLimit,
     photoLimit: input.photoLimit,
-    ownerId: user.id,
+    user_id: user.id,
     createdAt: new Date().toISOString(),
     revealAt: revealAt.toISOString(),
     password: input.password,
@@ -65,7 +65,40 @@ export async function createEvent(input: CreateEventInput): Promise<Event> {
   return data
 }
 
-export async function getAttendeesCount(eventId: string): Promise<number> {
+export async function updateEvent(eventId: number, input: Partial<CreateEventInput>): Promise<Event> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Unauthorized")
+
+  const { data, error } = await supabase
+    .from("events")
+    .update(input)
+    .eq("id", eventId)
+    .eq("user_id", user.id)
+    .select()
+    .single()
+
+  if (error) throw new Error(error.message)
+  return data
+}
+
+export async function deleteEvent(eventId: number): Promise<void> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Unauthorized")
+
+  const { error } = await supabase
+    .from("events")
+    .delete()
+    .eq("id", eventId)
+    .eq("user_id", user.id)
+
+  if (error) throw new Error(error.message)
+}
+
+export async function getAttendeesCount(eventId: number): Promise<number> {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -80,7 +113,7 @@ export async function getAttendeesCount(eventId: string): Promise<number> {
   return count ?? 0
 }
 
-export async function getShotsCount(eventId: string): Promise<number> {
+export async function getShotsCount(eventId: number): Promise<number> {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()

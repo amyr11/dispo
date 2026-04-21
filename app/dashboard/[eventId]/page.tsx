@@ -20,6 +20,8 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import Link from "next/link"
+import { EditEventDialog } from "@/features/events/components/edit-event-dialog"
+import { DeleteEventDialog } from "@/features/events/components/delete-event-dialog"
 
 export default async function Dashboard({
   params,
@@ -29,8 +31,8 @@ export default async function Dashboard({
   const { eventId } = await params
   const event = await getEvent(eventId)
   const [attendeesCount, shotsCount] = await Promise.all([
-    getAttendeesCount(eventId),
-    getShotsCount(eventId),
+    getAttendeesCount(event.id),
+    getShotsCount(event.id),
   ])
 
   return (
@@ -47,12 +49,8 @@ export default async function Dashboard({
             </Link>
 
             <div className="flex items-center gap-2">
-              <Button variant="destructive" size="icon">
-                <HugeiconsIcon icon={Delete02Icon} size={16} />
-              </Button>
-              <Button variant="outline" size="icon">
-                <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
-              </Button>
+              <DeleteEventDialog eventId={eventId} />
+              <EditEventDialog event={event} />
               <Button variant="default">
                 <HugeiconsIcon icon={QrCode01Icon} size={16} />
                 Share

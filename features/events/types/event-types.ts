@@ -1,6 +1,6 @@
 export type Event = {
   id: number
-  ownerId: string
+  user_id: string
   createdAt: number
   eventName: string
   eventStart: string
@@ -10,6 +10,6 @@ export type Event = {
   password: string
 }
 
-export type CreateEventInput = Omit<Event, 'id' | 'ownerId' | 'createdAt' | 'revealAt'> & {
+export type CreateEventInput = Omit<Event, 'id' | 'user_id' | 'createdAt' | 'revealAt'> & {
   password: string
 }
