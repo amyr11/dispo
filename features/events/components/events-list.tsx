@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { formatDate } from "@/lib/utils/date-utils"
+import Link from "next/link"
 
 export function EventsList() {
   const { data: eventsList = [] } = useQuery({
@@ -32,15 +33,14 @@ export function EventsList() {
   return (
     <div className="mt-4 flex flex-col gap-3">
       {sortedEvents.map((event) => (
-        <Card
-          key={event.id}
-          className="cursor-pointer transition-all active:scale-95"
-        >
-          <CardHeader>
-            <CardTitle>{event.eventName}</CardTitle>
-            <CardDescription>{formatDate(event.eventStart)}</CardDescription>
-          </CardHeader>
-        </Card>
+        <Link href={`/dashboard/${event.id}`} key={event.id}>
+          <Card className="cursor-pointer transition-all active:scale-95">
+            <CardHeader>
+              <CardTitle>{event.eventName}</CardTitle>
+              <CardDescription>{formatDate(event.eventStart)}</CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
       ))}
     </div>
   )

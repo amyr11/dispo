@@ -19,6 +19,23 @@ export async function getEvents(): Promise<Event[]> {
   return data ?? []
 }
 
+export async function getEvent(eventId: string): Promise<Event> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Unauthorized")
+
+  const { data, error } = await supabase
+    .from("events")
+    .select("*")
+    .eq("id", eventId)
+    .eq("ownerId", user.id)
+    .single()
+
+  if (error) throw new Error(error.message)
+  return data
+}
+
 export async function createEvent(input: CreateEventInput): Promise<Event> {
   const supabase = await createClient()
 

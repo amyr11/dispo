@@ -13,8 +13,8 @@ export default async function Dashboard() {
         <div className="sticky top-0 z-50 w-full max-w-lg bg-muted">
           <Navbar />
         </div>
-        <div className="w-full max-w-lg px-4">
-          <div className="mt-14 flex justify-center">
+        <div className="mt-20 w-full max-w-lg px-4">
+          <div className="flex justify-center">
             <div className="my-8 flex flex-col gap-2 py-12 text-center">
               <p className="font-heading text-4xl">
                 Hi, <span className="font-bold">{profile?.user_name}</span>
