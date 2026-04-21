@@ -4,6 +4,8 @@ import "./globals.css"
 import { ThemeProvider } from "@/features/auth/components/theme-provider"
 import { cn } from "@/lib/utils"
 
+import { ReactQueryProvider } from "@/lib/providers/react-query-provider"
+
 const notoSerifHeading = Noto_Serif({
   subsets: ["latin"],
   variable: "--font-heading",
@@ -38,7 +40,9 @@ export default function RootLayout({
     >
       <body className="bg-muted">
         <ThemeProvider>
-          <main>{children}</main>
+          <ReactQueryProvider>
+            <main>{children}</main>
+          </ReactQueryProvider>
         </ThemeProvider>
       </body>
     </html>
