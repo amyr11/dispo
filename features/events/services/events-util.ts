@@ -64,3 +64,33 @@ export async function createEvent(input: CreateEventInput): Promise<Event> {
   if (error) throw new Error(error.message)
   return data
 }
+
+export async function getAttendeesCount(eventId: string): Promise<number> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Unauthorized")
+
+  const { count, error } = await supabase
+    .from("attendees")
+    .select("*", { count: "exact", head: true })
+    .eq("eventId", eventId)
+
+  if (error) throw new Error(error.message)
+  return count ?? 0
+}
+
+export async function getShotsCount(eventId: string): Promise<number> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Unauthorized")
+
+  const { count, error } = await supabase
+    .from("photos")
+    .select("*", { count: "exact", head: true })
+    .eq("eventId", eventId)
+
+  if (error) throw new Error(error.message)
+  return count ?? 0
+}

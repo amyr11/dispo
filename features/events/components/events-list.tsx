@@ -11,6 +11,7 @@ import {
 import { formatDate } from "@/lib/utils/date-utils"
 import Link from "next/link"
 import EventBadge from "./event-badge"
+import Clickable from "@/components/ui/clickable"
 
 export function EventsList() {
   const { data: eventsList = [] } = useQuery({
@@ -32,16 +33,22 @@ export function EventsList() {
   }
 
   return (
-    <div className="mt-4 flex flex-col gap-3">
+    <div className="flex flex-col gap-3">
       {sortedEvents.map((event) => (
         <Link href={`/dashboard/${event.id}`} key={event.id}>
-          <Card className="cursor-pointer transition-all active:scale-95">
-            <CardHeader>
-              <EventBadge eventStart={event.eventStart} />
-              <CardTitle className="mt-2 text-lg">{event.eventName}</CardTitle>
-              <CardDescription>{formatDate(event.eventStart)}</CardDescription>
-            </CardHeader>
-          </Card>
+          <Clickable>
+            <Card>
+              <CardHeader>
+                <EventBadge eventStart={event.eventStart} />
+                <CardTitle className="mt-2 text-lg">
+                  {event.eventName}
+                </CardTitle>
+                <CardDescription>
+                  {formatDate(event.eventStart)}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Clickable>
         </Link>
       ))}
     </div>
