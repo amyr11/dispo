@@ -2,7 +2,6 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { CreateEventInput, Event } from "@/features/events/types/event-types"
-import bcrypt from 'bcrypt'
 
 export async function getEvents(): Promise<Event[]> {
   const supabase = await createClient()
@@ -47,8 +46,6 @@ export async function createEvent(input: CreateEventInput): Promise<Event> {
   revealAt.setDate(revealAt.getDate() + 1)
   revealAt.setHours(12, 0, 0, 0)
 
-  const passwordHash = await bcrypt.hash(input.password, 10)
-
   const { data, error } = await supabase
   .from('events')
   .insert({
@@ -59,7 +56,7 @@ export async function createEvent(input: CreateEventInput): Promise<Event> {
     ownerId: user.id,
     createdAt: new Date().toISOString(),
     revealAt: revealAt.toISOString(),
-    passwordHash,
+    password: input.password,
   })
   .select()
   .single()

@@ -7,9 +7,9 @@ export type Event = {
   revealAt: string
   attendeeLimit: number
   photoLimit: number
-  passwordHash: string
+  password: string
 }
 
-export type CreateEventInput = Omit<Event, 'id' | 'ownerId' | 'createdAt' | 'revealAt' | 'passwordHash'> & {
+export type CreateEventInput = Omit<Event, 'id' | 'ownerId' | 'createdAt' | 'revealAt'> & {
   password: string
 }
