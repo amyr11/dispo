@@ -22,7 +22,7 @@ import Link from "next/link"
 import { EditEventDialog } from "@/features/events/components/edit-event-dialog"
 import { DeleteEventDialog } from "@/features/events/components/delete-event-dialog"
 import { Event } from "@/features/events/types/event-types"
-import { isFuture, isPast, isToday } from "date-fns"
+import { isPast } from "date-fns"
 
 export function EventDashboardClient({
   eventId,
