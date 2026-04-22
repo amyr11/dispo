@@ -13,3 +13,5 @@ export type Event = {
 export type CreateEventInput = Omit<Event, 'id' | 'user_id' | 'createdAt' | 'revealAt'> & {
   password: string
 }
+
+export type EditEventInput = Partial<CreateEventInput> & { revealAt?: Date }

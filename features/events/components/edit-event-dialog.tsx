@@ -11,9 +11,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogDesctructiveAction,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { updateEvent } from "@/features/events/services/events-util"
+import { updateEvent } from "@/features/events/services/event-services"
 import { CreateEventInput, Event } from "@/features/events/types/event-types"
 import {
   DEFAULT_MAX_ATTENDEES,
@@ -42,14 +52,17 @@ function validate(form: CreateEventInput): FormErrors {
 }
 
 export function EditEventDialog({ event }: { event: Event }) {
-  const [open, setOpen] = useState(false)
-  const [form, setForm] = useState<CreateEventInput>({
+  const initialForm: CreateEventInput = {
     eventName: event.eventName,
     eventStart: event.eventStart,
     attendeeLimit: event.attendeeLimit,
     photoLimit: event.photoLimit,
     password: event.password ?? "",
-  })
+  }
+
+  const [open, setOpen] = useState(false)
+  const [confirmClose, setConfirmClose] = useState(false)
+  const [form, setForm] = useState<CreateEventInput>(initialForm)
   const [errors, setErrors] = useState<FormErrors>({})
 
   const queryClient = useQueryClient()
@@ -62,6 +75,16 @@ export function EditEventDialog({ event }: { event: Event }) {
       setErrors({})
     },
   })
+
+  function isDirty(form: CreateEventInput) {
+    return (
+      form.eventName !== initialForm.eventName ||
+      form.eventStart !== initialForm.eventStart ||
+      form.attendeeLimit !== initialForm.attendeeLimit ||
+      form.photoLimit !== initialForm.photoLimit ||
+      form.password !== initialForm.password
+    )
+  }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target
@@ -85,90 +108,131 @@ export function EditEventDialog({ event }: { event: Event }) {
     mutation.mutate(form)
   }
 
+  function handleOpenChange(next: boolean) {
+    if (!next && isDirty(form)) {
+      setConfirmClose(true)
+    } else {
+      setOpen(next)
+      if (!next) {
+        setForm(initialForm)
+        setErrors({})
+      }
+    }
+  }
+
+  function handleConfirmClose() {
+    setConfirmClose(false)
+    setOpen(false)
+    setForm(initialForm)
+    setErrors({})
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="icon">
-          <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Edit Event</DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <Label>Event Name</Label>
-            <Input
-              name="eventName"
-              value={form.eventName}
-              onChange={handleChange}
-            />
-            {errors.eventName && (
-              <p className="text-sm text-destructive">{errors.eventName}</p>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <Label>Event Date</Label>
-            <Input
-              name="eventStart"
-              type="date"
-              value={form.eventStart}
-              onChange={handleChange}
-            />
-            {errors.eventStart && (
-              <p className="text-sm text-destructive">{errors.eventStart}</p>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <Label>Max Attendees</Label>
-            <Input
-              name="attendeeLimit"
-              type="number"
-              value={form.attendeeLimit}
-              onChange={handleChange}
-              min={1}
-              max={DEFAULT_MAX_ATTENDEES}
-            />
-            {errors.attendeeLimit && (
-              <p className="text-sm text-destructive">{errors.attendeeLimit}</p>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <Label>Photo Limit</Label>
-            <Input
-              name="photoLimit"
-              type="number"
-              value={form.photoLimit}
-              onChange={handleChange}
-              min={1}
-              max={DEFAULT_MAX_PHOTO_LIMIT}
-            />
-            {errors.photoLimit && (
-              <p className="text-sm text-destructive">{errors.photoLimit}</p>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <Label>Event Password</Label>
-            <Input
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-            />
-            {errors.password && (
-              <p className="text-sm text-destructive">{errors.password}</p>
-            )}
-          </div>
-
-          <Button onClick={handleSubmit} disabled={mutation.isPending}>
-            {mutation.isPending ? "Saving..." : "Save changes"}
+    <>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="icon">
+            <HugeiconsIcon icon={PencilEdit01Icon} size={16} />
           </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Event</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <Label>Event Name</Label>
+              <Input
+                name="eventName"
+                value={form.eventName}
+                onChange={handleChange}
+              />
+              {errors.eventName && (
+                <p className="text-sm text-destructive">{errors.eventName}</p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <Label>Event Date</Label>
+              <Input
+                name="eventStart"
+                type="date"
+                value={form.eventStart}
+                onChange={handleChange}
+              />
+              {errors.eventStart && (
+                <p className="text-sm text-destructive">{errors.eventStart}</p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <Label>Max Attendees</Label>
+              <Input
+                name="attendeeLimit"
+                type="number"
+                defaultValue={form.attendeeLimit}
+                onChange={handleChange}
+                min={1}
+                max={DEFAULT_MAX_ATTENDEES}
+              />
+              {errors.attendeeLimit && (
+                <p className="text-sm text-destructive">
+                  {errors.attendeeLimit}
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <Label>Photo Limit</Label>
+              <Input
+                name="photoLimit"
+                type="number"
+                defaultValue={form.photoLimit}
+                onChange={handleChange}
+                min={1}
+                max={DEFAULT_MAX_PHOTO_LIMIT}
+              />
+              {errors.photoLimit && (
+                <p className="text-sm text-destructive">{errors.photoLimit}</p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <Label>Event Password</Label>
+              <Input
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+              />
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password}</p>
+              )}
+            </div>
+
+            <Button onClick={handleSubmit} disabled={mutation.isPending}>
+              {mutation.isPending ? "Saving..." : "Save changes"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={confirmClose} onOpenChange={setConfirmClose}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes. Are you sure you want to close this
+              form?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No, i&apos;ll keep editing</AlertDialogCancel>
+            <AlertDialogDesctructiveAction onClick={handleConfirmClose}>
+              Yes, discard them
+            </AlertDialogDesctructiveAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

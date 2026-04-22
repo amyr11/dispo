@@ -1,7 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
-import { CreateEventInput, Event } from "@/features/events/types/event-types"
+import { CreateEventInput, EditEventInput, Event } from "@/features/events/types/event-types"
 
 export async function getEvents(): Promise<Event[]> {
   const supabase = await createClient()
@@ -18,7 +18,7 @@ export async function getEvents(): Promise<Event[]> {
   return data ?? []
 }
 
-export async function getEvent(eventId: string): Promise<Event> {
+export async function getEvent(eventId: number): Promise<Event> {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -35,16 +35,18 @@ export async function getEvent(eventId: string): Promise<Event> {
   return data
 }
 
+function computeRevealAt(eventStart: string | Date): Date {
+  const revealAt = new Date(eventStart)
+  revealAt.setDate(revealAt.getDate() + 1)
+  revealAt.setHours(12, 0, 0, 0)
+  return revealAt
+}
+
 export async function createEvent(input: CreateEventInput): Promise<Event> {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
-
-  const eventStart = new Date(input.eventStart)
-  const revealAt = new Date(eventStart)
-  revealAt.setDate(revealAt.getDate() + 1)
-  revealAt.setHours(12, 0, 0, 0)
 
   const { data, error } = await supabase
   .from('events')
@@ -55,7 +57,7 @@ export async function createEvent(input: CreateEventInput): Promise<Event> {
     photoLimit: input.photoLimit,
     user_id: user.id,
     createdAt: new Date().toISOString(),
-    revealAt: revealAt.toISOString(),
+    revealAt: computeRevealAt(input.eventStart).toISOString(),
     password: input.password,
   })
   .select()
@@ -65,15 +67,21 @@ export async function createEvent(input: CreateEventInput): Promise<Event> {
   return data
 }
 
-export async function updateEvent(eventId: number, input: Partial<CreateEventInput>): Promise<Event> {
+export async function updateEvent(eventId: number, input: EditEventInput): Promise<Event> {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error("Unauthorized")
 
+  const updateData: EditEventInput = { ...input }
+
+  if (input.eventStart) {
+    updateData.revealAt = computeRevealAt(input.eventStart)
+  }
+
   const { data, error } = await supabase
     .from("events")
-    .update(input)
+    .update(updateData)
     .eq("id", eventId)
     .eq("user_id", user.id)
     .select()

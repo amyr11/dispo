@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { createEvent } from "@/features/events/services/events-util"
+import { createEvent } from "@/features/events/services/event-services"
 import { CreateEventInput } from "@/features/events/types/event-types"
 import {
   DEFAULT_MAX_ATTENDEES,
@@ -233,7 +233,7 @@ export function CreateEventDialog() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>No, I&apos;ll keep editing</AlertDialogCancel>
+            <AlertDialogCancel>No, i&apos;ll keep editing</AlertDialogCancel>
             <AlertDialogDesctructiveAction onClick={handleConfirmClose}>
               Yes, discard them
             </AlertDialogDesctructiveAction>

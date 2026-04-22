@@ -14,7 +14,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { deleteEvent } from "@/features/events/services/events-util"
+import { deleteEvent } from "@/features/events/services/event-services"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 
@@ -51,7 +51,7 @@ export function DeleteEventDialog({ eventId }: { eventId: number }) {
             onClick={() => mutation.mutate()}
             disabled={mutation.isPending}
           >
-            {mutation.isPending ? "Deleting..." : "Delete"}
+            {mutation.isPending ? "Deleting..." : "Yes, delete it"}
           </AlertDialogDesctructiveAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { getEvents } from "@/features/events/services/events-util"
+import { getEvents } from "@/features/events/services/event-services"
 import {
   Card,
   CardDescription,
@@ -19,10 +19,33 @@ export function EventsList() {
     queryFn: getEvents,
   })
 
-  const sortedEvents = [...eventsList].sort(
-    (a, b) =>
-      new Date(a.eventStart).getTime() - new Date(b.eventStart).getTime()
-  )
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const tomorrow = new Date(today)
+  tomorrow.setDate(today.getDate() + 1)
+
+  const sortedEvents = [...eventsList].sort((a, b) => {
+    const aStart = new Date(a.eventStart)
+    const bStart = new Date(b.eventStart)
+
+    const getStatus = (start: Date) => {
+      const day = new Date(
+        start.getFullYear(),
+        start.getMonth(),
+        start.getDate()
+      )
+      if (day.getTime() === today.getTime()) return 0 // ongoing
+      if (day >= tomorrow) return 1 // upcoming
+      return 2 // ended
+    }
+
+    const aStatus = getStatus(aStart)
+    const bStatus = getStatus(bStart)
+
+    if (aStatus !== bStatus) return aStatus - bStatus
+
+    return aStart.getTime() - bStart.getTime()
+  })
 
   if (eventsList.length === 0) {
     return (
