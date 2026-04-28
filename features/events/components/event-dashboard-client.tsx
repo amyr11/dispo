@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import Clickable from "@/components/ui/clickable"
 import EventBadge from "@/features/events/components/event-badge"
 import StatsCard from "@/features/events/components/stats-card"
-import { getEvent, getEventStats } from "@/features/events/services/events-api"
+import { getEvent, getEventStats } from "@/features/events/client/api"
 import { formatDate } from "@/lib/utils/date-utils"
 import {
   ArrowLeft01Icon,
