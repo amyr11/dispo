@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { createEvent } from "@/features/events/services/event-services"
+import { createEvent } from "@/features/events/services/events-api"
 import { CreateEventInput } from "@/features/events/types/event-types"
 import {
   DEFAULT_MAX_ATTENDEES,

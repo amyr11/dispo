@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { getEvents } from "@/features/events/services/event-services"
+import { getEvents } from "@/features/events/services/events-api"
 import {
   Card,
   CardDescription,

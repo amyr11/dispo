@@ -5,11 +5,7 @@ import { Button } from "@/components/ui/button"
 import Clickable from "@/components/ui/clickable"
 import EventBadge from "@/features/events/components/event-badge"
 import StatsCard from "@/features/events/components/stats-card"
-import {
-  getAttendeesCount,
-  getEvent,
-  getShotsCount,
-} from "@/features/events/services/event-services"
+import { getEvent, getEventStats } from "@/features/events/services/events-api"
 import { formatDate } from "@/lib/utils/date-utils"
 import {
   ArrowLeft01Icon,
@@ -21,37 +17,26 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import Link from "next/link"
 import { EditEventDialog } from "@/features/events/components/edit-event-dialog"
 import { DeleteEventDialog } from "@/features/events/components/delete-event-dialog"
-import { Event } from "@/features/events/types/event-types"
 import { isPast } from "date-fns"
 
-export function EventDashboardClient({
-  eventId,
-  initialEvent,
-  initialAttendeesCount,
-  initialShotsCount,
-}: {
-  eventId: number
-  initialEvent: Event
-  initialAttendeesCount: number
-  initialShotsCount: number
-}) {
-  const { data: event = initialEvent } = useQuery({
+export function EventDashboardClient({ eventId }: { eventId: number }) {
+  const { data: event, isLoading: isEventLoading } = useQuery({
     queryKey: ["events", eventId],
     queryFn: () => getEvent(eventId),
-    initialData: initialEvent,
   })
 
-  const { data: attendeesCount = initialAttendeesCount } = useQuery({
-    queryKey: ["attendees", eventId],
-    queryFn: () => getAttendeesCount(eventId),
-    initialData: initialAttendeesCount,
+  const { data: stats, isLoading: isStatsLoading } = useQuery({
+    queryKey: ["event-stats", eventId],
+    queryFn: () => getEventStats(eventId),
   })
 
-  const { data: shotsCount = initialShotsCount } = useQuery({
-    queryKey: ["shots", eventId],
-    queryFn: () => getShotsCount(eventId),
-    initialData: initialShotsCount,
-  })
+  if (isEventLoading || !event || isStatsLoading || !stats) {
+    return (
+      <div className="my-20 flex w-full max-w-lg flex-col px-4 sm:max-w-2xl">
+        <p className="text-sm text-muted-foreground">Loading event...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="my-20 flex w-full max-w-lg flex-col px-4 sm:max-w-2xl">
@@ -83,7 +68,7 @@ export function EventDashboardClient({
             <StatsCard
               icon={UserGroup02Icon}
               label="Attendees"
-              value={attendeesCount}
+              value={stats.attendeesCount}
               limit={event.attendeeLimit}
             />
           </Link>
@@ -93,7 +78,7 @@ export function EventDashboardClient({
             <StatsCard
               icon={Camera01Icon}
               label="Shots taken"
-              value={shotsCount}
+              value={stats.shotsCount}
               limit={event.photoLimit * event.attendeeLimit}
             />
           </Link>

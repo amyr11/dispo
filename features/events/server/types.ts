@@ -1,10 +1,10 @@
-export type Event = {
+export type EventRecord = {
   id: number
   userId: string
-  createdAt: string
+  createdAt: Date
   eventName: string
-  eventStart: string
-  revealAt: string
+  eventStart: Date
+  revealAt: Date
   attendeeLimit: number
   photoLimit: number
   password: string
@@ -18,4 +18,4 @@ export type CreateEventInput = {
   password: string
 }
 
-export type EditEventInput = Partial<CreateEventInput>
+export type UpdateEventInput = Partial<CreateEventInput>

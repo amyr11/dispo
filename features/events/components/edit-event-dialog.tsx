@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { updateEvent } from "@/features/events/services/event-services"
+import { updateEvent } from "@/features/events/services/events-api"
 import { CreateEventInput, Event } from "@/features/events/types/event-types"
 import {
   DEFAULT_MAX_ATTENDEES,
@@ -52,9 +52,11 @@ function validate(form: CreateEventInput): FormErrors {
 }
 
 export function EditEventDialog({ event }: { event: Event }) {
+  const normalizedEventStart = event.eventStart.slice(0, 10)
+
   const initialForm: CreateEventInput = {
     eventName: event.eventName,
-    eventStart: event.eventStart,
+    eventStart: normalizedEventStart,
     attendeeLimit: event.attendeeLimit,
     photoLimit: event.photoLimit,
     password: event.password ?? "",
