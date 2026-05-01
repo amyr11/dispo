@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/prisma"
-import { CreateEventInput, UpdateEventInput } from "@/features/events/server/types"
+import {
+  CreateEventInput,
+  UpdateEventInput,
+} from "@/features/events/server/types"
 
 export const eventsRepository = {
   findManyByUserId(userId: string) {
@@ -12,6 +15,12 @@ export const eventsRepository = {
   findOneByIdAndUserId(eventId: number, userId: string) {
     return prisma.event.findFirst({
       where: { id: eventId, userId },
+    })
+  },
+
+  findOneById(eventId: number) {
+    return prisma.event.findUnique({
+      where: { id: eventId },
     })
   },
 
@@ -29,14 +38,23 @@ export const eventsRepository = {
     })
   },
 
-  updateByIdAndUserId(eventId: number, userId: string, input: UpdateEventInput, revealAt?: Date) {
+  updateByIdAndUserId(
+    eventId: number,
+    userId: string,
+    input: UpdateEventInput,
+    revealAt?: Date
+  ) {
     return prisma.event.updateMany({
       where: { id: eventId, userId },
       data: {
         ...(input.eventName ? { eventName: input.eventName } : {}),
         ...(input.eventStart ? { eventStart: new Date(input.eventStart) } : {}),
-        ...(typeof input.attendeeLimit === "number" ? { attendeeLimit: input.attendeeLimit } : {}),
-        ...(typeof input.photoLimit === "number" ? { photoLimit: input.photoLimit } : {}),
+        ...(typeof input.attendeeLimit === "number"
+          ? { attendeeLimit: input.attendeeLimit }
+          : {}),
+        ...(typeof input.photoLimit === "number"
+          ? { photoLimit: input.photoLimit }
+          : {}),
         ...(input.password ? { password: input.password } : {}),
         ...(revealAt ? { revealAt } : {}),
       },

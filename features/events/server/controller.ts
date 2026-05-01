@@ -1,16 +1,16 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { eventsService } from "@/features/events/server/service"
-import { NotFoundError, UnauthorizedError, ValidationError } from "@/features/events/server/errors"
-import { parseCreateEventInput, parseUpdateEventInput } from "@/features/events/server/schema"
-
-function parseEventId(eventIdParam: string): number {
-  const eventId = Number(eventIdParam)
-  if (!Number.isInteger(eventId) || eventId < 1) {
-    throw new ValidationError("Invalid event ID")
-  }
-  return eventId
-}
+import {
+  NotFoundError,
+  UnauthorizedError,
+  ValidationError,
+} from "@/features/events/server/errors"
+import {
+  parseCreateEventInput,
+  parseUpdateEventInput,
+} from "@/features/events/server/schema"
+import { parseEventId } from "@/features/events/server/params"
 
 async function getCurrentUserId(): Promise<string> {
   const supabase = await createClient()
@@ -74,7 +74,10 @@ export async function getEventController(eventIdParam: string) {
   }
 }
 
-export async function updateEventController(req: Request, eventIdParam: string) {
+export async function updateEventController(
+  req: Request,
+  eventIdParam: string
+) {
   try {
     const userId = await getCurrentUserId()
     const eventId = parseEventId(eventIdParam)

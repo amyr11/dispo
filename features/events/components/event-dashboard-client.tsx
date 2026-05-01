@@ -11,13 +11,13 @@ import {
   ArrowLeft01Icon,
   UserGroup02Icon,
   Camera01Icon,
-  QrCode01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import Link from "next/link"
 import { EditEventDialog } from "@/features/events/components/edit-event-dialog"
 import { DeleteEventDialog } from "@/features/events/components/delete-event-dialog"
 import { isPast } from "date-fns"
+import { ShareEventDialog } from "@/features/events/components/share-event-dialog"
 
 export function EventDashboardClient({ eventId }: { eventId: number }) {
   const { data: event, isLoading: isEventLoading } = useQuery({
@@ -51,10 +51,11 @@ export function EventDashboardClient({ eventId }: { eventId: number }) {
           <div hidden={isPast(event.eventStart)}>
             <EditEventDialog event={event} />
           </div>
-          <Button variant="default">
-            <HugeiconsIcon icon={QrCode01Icon} size={16} />
-            Share
-          </Button>
+          <ShareEventDialog
+            eventId={event.id}
+            eventName={event.eventName}
+            eventStart={event.eventStart}
+          />
         </div>
       </div>
       <div className="flex flex-col gap-2 border-b py-8">

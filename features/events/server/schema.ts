@@ -1,5 +1,8 @@
 import { ValidationError } from "@/features/events/server/errors"
-import { CreateEventInput, UpdateEventInput } from "@/features/events/server/types"
+import {
+  CreateEventInput,
+  UpdateEventInput,
+} from "@/features/events/server/types"
 
 function asString(value: unknown, field: string): string {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -24,7 +27,10 @@ function asPositiveInt(value: unknown, field: string): number {
   return n
 }
 
-function asOptionalPositiveInt(value: unknown, field: string): number | undefined {
+function asOptionalPositiveInt(
+  value: unknown,
+  field: string
+): number | undefined {
   if (value == null) return undefined
   const n = Number(value)
   if (!Number.isInteger(n) || n < 1) {
@@ -70,8 +76,15 @@ export function parseUpdateEventInput(payload: unknown): UpdateEventInput {
   }
 
   if (Object.values(parsed).every((value) => value === undefined)) {
-    throw new ValidationError("At least one field is required to update an event")
+    throw new ValidationError(
+      "At least one field is required to update an event"
+    )
   }
 
   return parsed
+}
+
+export function parsePublicEventPasswordInput(payload: unknown): string {
+  const input = (payload ?? {}) as Record<string, unknown>
+  return asString(input.password, "password")
 }
