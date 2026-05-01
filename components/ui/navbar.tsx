@@ -1,12 +1,12 @@
 import Link from "next/link"
-import { getProfile } from "@/features/auth/services/auth-utils"
+import { authService } from "@/features/auth/server/service"
 import { Avatar, AvatarFallback, AvatarImage } from "./avatar"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { CameraSmile01Icon } from "@hugeicons/core-free-icons"
 import { NavbarWrapper } from "./navbar-wrapper"
 
 export async function Navbar() {
-  const { user, avatarUrl } = await getProfile()
+  const { user, avatarUrl } = await authService.getProfile()
 
   if (!user) return null
 

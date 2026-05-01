@@ -1,30 +1,29 @@
 import { redirect } from "next/navigation"
 
-import { createClient } from "@/lib/supabase/server"
 import { ProfileSetupForm } from "@/features/auth/components/profile-setup-form"
+import {
+  ProfileLookupError,
+  UnauthorizedError,
+} from "@/features/auth/server/errors"
+import { authService } from "@/features/auth/server/service"
+
+async function getProfileSetupState() {
+  try {
+    return await authService.getProfileSetupState()
+  } catch (error) {
+    if (
+      error instanceof UnauthorizedError ||
+      error instanceof ProfileLookupError
+    ) {
+      redirect("/auth/login")
+    }
+
+    throw error
+  }
+}
 
 export default async function ProfileSetupPage() {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser()
-
-  if (userError || !user) {
-    redirect("/auth/login")
-  }
-
-  const { data: profile, error: profileError } = await supabase
-    .from("users")
-    .select("id")
-    .eq("id", user.id)
-    .maybeSingle()
-
-  if (profileError) {
-    console.error(profileError)
-    redirect("/auth/login")
-  }
+  const { profile } = await getProfileSetupState()
 
   if (profile) {
     redirect("/dashboard")

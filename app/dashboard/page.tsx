@@ -1,10 +1,10 @@
 import { Navbar } from "@/components/ui/navbar"
-import { getProfile } from "@/features/auth/services/auth-utils"
+import { authService } from "@/features/auth/server/service"
 import { CreateEventDialog } from "@/features/events/components/create-event-dialog"
 import { EventsList } from "@/features/events/components/events-list"
 
 export default async function Dashboard() {
-  const { profile } = await getProfile()
+  const { profile } = await authService.getProfile()
 
   return (
     <div className="flex flex-col items-center justify-center">
