@@ -12,6 +12,10 @@ import { formatDate } from "@/lib/utils/date-utils"
 import Link from "next/link"
 import EventBadge from "./event-badge"
 import Clickable from "@/components/ui/clickable"
+import {
+  getEventStartDay,
+  getEventStatus,
+} from "@/features/events/utils/event-status"
 
 export function EventsList() {
   const { data: eventsList = [] } = useQuery({
@@ -20,23 +24,16 @@ export function EventsList() {
   })
 
   const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const tomorrow = new Date(today)
-  tomorrow.setDate(today.getDate() + 1)
 
   const sortedEvents = [...eventsList].sort((a, b) => {
     const aStart = new Date(a.eventStart)
     const bStart = new Date(b.eventStart)
 
     const getStatus = (start: Date) => {
-      const day = new Date(
-        start.getFullYear(),
-        start.getMonth(),
-        start.getDate()
-      )
-      if (day.getTime() === today.getTime()) return 0 // ongoing
-      if (day >= tomorrow) return 1 // upcoming
-      return 2 // ended
+      const status = getEventStatus(start, now)
+      if (status === "Ongoing") return 0
+      if (status === "Upcoming") return 1
+      return 2
     }
 
     const aStatus = getStatus(aStart)
@@ -44,7 +41,9 @@ export function EventsList() {
 
     if (aStatus !== bStatus) return aStatus - bStatus
 
-    return aStart.getTime() - bStart.getTime()
+    return (
+      getEventStartDay(aStart).getTime() - getEventStartDay(bStart).getTime()
+    )
   })
 
   if (eventsList.length === 0) {

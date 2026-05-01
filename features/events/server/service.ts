@@ -8,6 +8,7 @@ import {
   CreateEventInput,
   UpdateEventInput,
 } from "@/features/events/server/types"
+import { getEventStatus } from "@/features/events/utils/event-status"
 
 function computeRevealAt(eventStartIso: string): Date {
   const revealAt = new Date(eventStartIso)
@@ -93,6 +94,15 @@ export const eventsService = {
 
   async verifyPublicEventPassword(eventId: number, password: string) {
     const event = await this.getPublicEventById(eventId)
+    const eventStatus = getEventStatus(event.eventStart)
+
+    if (eventStatus === "Upcoming") {
+      throw new UnauthorizedError("This event is not open yet")
+    }
+
+    if (eventStatus === "Ended") {
+      throw new UnauthorizedError("This event has ended")
+    }
 
     if (event.password !== password) {
       throw new UnauthorizedError("Invalid event password")

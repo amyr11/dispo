@@ -1,23 +1,10 @@
 import { Badge } from "@/components/ui/badge"
+import {
+  type EventStatus,
+  getEventStatus,
+} from "@/features/events/utils/event-status"
 
-type EventStatus = "Upcoming" | "Ongoing" | "Ended"
 type BadgeVariant = "default" | "secondary" | "destructive" | "outline"
-
-function getEventStatus(eventStart: Date | string): EventStatus {
-  const start = new Date(eventStart)
-  const now = new Date()
-
-  const startDay = new Date(
-    start.getFullYear(),
-    start.getMonth(),
-    start.getDate()
-  )
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-
-  if (startDay > today) return "Upcoming"
-  if (startDay.getTime() === today.getTime()) return "Ongoing"
-  return "Ended"
-}
 
 const statusConfig: Record<
   EventStatus,

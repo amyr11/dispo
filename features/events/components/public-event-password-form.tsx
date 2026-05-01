@@ -66,7 +66,7 @@ export function PublicEventPasswordForm({
         <p className="text-sm">{formatDate(eventStart)}</p>
       </header>
 
-      <div className="flex w-full max-w-xs flex-col gap-4">
+      <div className="flex w-full max-w-sm flex-col gap-4">
         <div className="flex flex-col gap-2">
           <HugeiconsIcon
             icon={LockPasswordIcon}
@@ -74,10 +74,10 @@ export function PublicEventPasswordForm({
           />
           <div className="flex flex-col gap-1">
             <h1 className="font-heading text-2xl font-medium">
-              Event password
+              Join the fun and memories! ✨
             </h1>
             <p className="text-sm text-muted-foreground">
-              Enter the password to open this event.
+              Enter the password for this event.
             </p>
           </div>
         </div>

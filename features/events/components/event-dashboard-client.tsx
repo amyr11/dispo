@@ -18,6 +18,7 @@ import { EditEventDialog } from "@/features/events/components/edit-event-dialog"
 import { DeleteEventDialog } from "@/features/events/components/delete-event-dialog"
 import { isPast } from "date-fns"
 import { ShareEventDialog } from "@/features/events/components/share-event-dialog"
+import { getEventStatus } from "@/features/events/utils/event-status"
 
 export function EventDashboardClient({ eventId }: { eventId: number }) {
   const { data: event, isLoading: isEventLoading } = useQuery({
@@ -38,6 +39,8 @@ export function EventDashboardClient({ eventId }: { eventId: number }) {
     )
   }
 
+  const eventStatus = getEventStatus(event.eventStart)
+
   return (
     <div className="my-20 flex w-full max-w-lg flex-col px-4 sm:max-w-2xl">
       <div className="flex items-center justify-between">
@@ -51,11 +54,13 @@ export function EventDashboardClient({ eventId }: { eventId: number }) {
           <div hidden={isPast(event.eventStart)}>
             <EditEventDialog event={event} />
           </div>
-          <ShareEventDialog
-            eventId={event.id}
-            eventName={event.eventName}
-            eventStart={event.eventStart}
-          />
+          {eventStatus !== "Ended" && (
+            <ShareEventDialog
+              eventId={event.id}
+              eventName={event.eventName}
+              eventStart={event.eventStart}
+            />
+          )}
         </div>
       </div>
       <div className="flex flex-col gap-2 border-b py-8">
