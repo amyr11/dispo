@@ -33,6 +33,59 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+function nextAnimationFrame(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()))
+}
+
+function waitForVideoFrame(video: HTMLVideoElement, timeoutMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    const hasFrameCallback =
+      typeof video.requestVideoFrameCallback === "function"
+
+    if (!hasFrameCallback) {
+      void nextAnimationFrame().then(() => resolve())
+      return
+    }
+
+    let settled = false
+    const timeoutId = window.setTimeout(() => {
+      if (settled) return
+      settled = true
+      resolve()
+    }, timeoutMs)
+
+    video.requestVideoFrameCallback(() => {
+      if (settled) return
+      settled = true
+      window.clearTimeout(timeoutId)
+      resolve()
+    })
+  })
+}
+
+async function waitForVideoFrames(
+  video: HTMLVideoElement,
+  frameCount: number,
+  timeoutPerFrameMs: number
+): Promise<void> {
+  for (let index = 0; index < frameCount; index += 1) {
+    await waitForVideoFrame(video, timeoutPerFrameMs)
+  }
+}
+
+async function drawSettledTorchFrame(
+  video: HTMLVideoElement,
+  context: OffscreenCanvasRenderingContext2D,
+  width: number,
+  height: number
+): Promise<void> {
+  // Some devices still return a transition frame right after torch engages.
+  // Draw one frame, wait for the next true camera frame, then draw again.
+  context.drawImage(video, 0, 0, width, height)
+  await waitForVideoFrames(video, 1, 200)
+  context.drawImage(video, 0, 0, width, height)
+}
+
 function getTorchCapabilities(track: MediaStreamTrack) {
   return track.getCapabilities() as MediaTrackCapabilities & {
     torch?: boolean
@@ -120,7 +173,7 @@ function createDisposableFilmProfile(): DisposableFilmProfile {
     tintStrength: randomBetween(random, 0.15, 0.2),
     warmth: randomBetween(random, 0.2, 0.24),
     fade: randomBetween(random, 0.01, 0.03),
-    blurPx: randomBetween(random, 0.15, 5.4),
+    blurPx: randomBetween(random, 0.15, 1.4),
     blurMix: 1,
     grain: randomBetween(random, 0.05, 0.1),
     whitePoint: randomBetween(random, 0.86, 0.90),
@@ -364,5 +417,78 @@ export async function captureImage(
       await track.applyConstraints({ advanced: [{ torch: false } as never] })
       torchEnabled = false
     }
+  }
+}
+
+export async function captureImageFastFromVideo(
+  video: HTMLVideoElement,
+  track: MediaStreamTrack
+): Promise<Blob> {
+  const captureWidth = 1200
+  const captureHeight = 1600
+
+  if (!captureWidth || !captureHeight) {
+    throw new Error("Camera preview is not ready")
+  }
+
+  const capabilities = getTorchCapabilities(track)
+  const hasTorch = capabilities.torch === true
+  const flashDurationMs = 600
+  const jpegQuality = 0.9
+
+  let torchEnabled = false
+
+  try {
+    const canvas = new OffscreenCanvas(captureWidth, captureHeight)
+    const context = canvas.getContext("2d")
+
+    if (!context) {
+      throw new Error("Unable to capture photo")
+    }
+
+    if (hasTorch) {
+      await track.applyConstraints({ advanced: [{ torch: true } as never] })
+      torchEnabled = true
+      // Wait for real camera frames after torch-on instead of relying on wall-clock only.
+      await waitForVideoFrames(video, 3, 220)
+      await sleep(flashDurationMs)
+      await waitForVideoFrames(video, 1, 180)
+      await drawSettledTorchFrame(video, context, captureWidth, captureHeight)
+      // Keep torch for one more frame after draw to avoid sensor readout edge cases.
+      await waitForVideoFrames(video, 1, 180)
+    } else {
+      context.drawImage(video, 0, 0, captureWidth, captureHeight)
+    }
+
+    // Capture first while torch is still on, then turn torch off.
+    if (hasTorch && torchEnabled) {
+      await track.applyConstraints({ advanced: [{ torch: false } as never] })
+      torchEnabled = false
+    }
+
+    return await canvas.convertToBlob({ type: "image/jpeg", quality: jpegQuality })
+  } finally {
+    if (hasTorch && torchEnabled) {
+      await track.applyConstraints({ advanced: [{ torch: false } as never] })
+    }
+  }
+}
+
+export async function applyDisposableFilmEffectToBlob(blob: Blob): Promise<Blob> {
+  const bitmap = await createImageBitmap(blob)
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height)
+  const context = canvas.getContext("2d")
+
+  if (!context) {
+    bitmap.close()
+    throw new Error("Unable to process photo")
+  }
+
+  try {
+    context.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height)
+    applyDisposableFilmEffect(context, bitmap.width, bitmap.height)
+    return await canvas.convertToBlob({ type: "image/jpeg", quality: 0.86 })
+  } finally {
+    bitmap.close()
   }
 }

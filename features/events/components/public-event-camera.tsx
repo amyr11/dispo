@@ -7,7 +7,8 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Button } from "@/components/ui/button"
 import {
   MAX_UPLOAD_PHOTO_BYTES,
-  captureImage,
+  applyDisposableFilmEffectToBlob,
+  captureImageFastFromVideo,
   compressPhotoForUpload,
 } from "@/features/events/utils/capture-image"
 import {
@@ -42,6 +43,19 @@ type CapturePhotoResponse = {
 type CapturePhotoErrorResponse = {
   error?: string
   code?: string
+}
+
+type QueuedCapture = {
+  id: string
+  takenAt: string
+  rawBlob: Blob
+}
+
+type ProcessedCapture = {
+  id: string
+  takenAt: string
+  file: File
+  attempts: number
 }
 
 function isPhoneDevice(): boolean {
@@ -100,11 +114,23 @@ export function PublicEventCamera({
   const router = useRouter()
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const pendingCapturesRef = useRef<QueuedCapture[]>([])
+  const processedCapturesRef = useRef<ProcessedCapture[]>([])
+  const isProcessingRef = useRef(false)
+  const isUploadingRef = useRef(false)
+  const uploadTimerRef = useRef<number | null>(null)
+  const captureIdRef = useRef(0)
+  const freezeUrlRef = useRef<string | null>(null)
 
   const [error, setError] = useState("")
   const [isLoadingState, setIsLoadingState] = useState(true)
   const [isCameraReady, setIsCameraReady] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isCapturing, setIsCapturing] = useState(false)
+  const [queuedCapturesCount, setQueuedCapturesCount] = useState(0)
+  const [failedCapturesCount, setFailedCapturesCount] = useState(0)
+  const [flashActive, setFlashActive] = useState(false)
+  const [freezeFrameUrl, setFreezeFrameUrl] = useState<string | null>(null)
+  const [uploadErrorToast, setUploadErrorToast] = useState("")
   const [lensOptions, setLensOptions] = useState<LensOption[]>([])
   const [selectedLensDeviceId, setSelectedLensDeviceId] = useState("")
   const [photosTaken, setPhotosTaken] = useState(0)
@@ -117,6 +143,10 @@ export function PublicEventCamera({
   const photosLeft = useMemo(
     () => Math.max(0, photoLimit - photosTaken),
     [photoLimit, photosTaken]
+  )
+  const captureSlotsLeft = useMemo(
+    () => Math.max(0, photoLimit - photosTaken - queuedCapturesCount),
+    [photoLimit, photosTaken, queuedCapturesCount]
   )
 
   const selectedLensSupportsFlash = useMemo(
@@ -131,6 +161,14 @@ export function PublicEventCamera({
       router.replace(`/events/${eventId}/public?cameraError=missing-attendee`)
     }
   }, [eventId, fingerprint, router])
+
+  useEffect(
+    () => () => {
+      if (freezeUrlRef.current) URL.revokeObjectURL(freezeUrlRef.current)
+      if (uploadTimerRef.current) window.clearTimeout(uploadTimerRef.current)
+    },
+    []
+  )
 
   useEffect(() => {
     if (!fingerprint) return
@@ -184,7 +222,7 @@ export function PublicEventCamera({
   }, [eventId, fingerprint, router])
 
   useEffect(() => {
-    if (isLoadingState || error || photoLimit <= 0 || photosLeft <= 0) return
+    if (isLoadingState || photoLimit <= 0) return
 
     let active = true
 
@@ -210,7 +248,9 @@ export function PublicEventCamera({
           ...lens,
           supportsFlash: flashByDeviceId.get(lens.deviceId) ?? false,
         }))
-        const firstFlashLens = selectableLenses.find((lens) => lens.supportsFlash)
+        const firstFlashLens = selectableLenses.find(
+          (lens) => lens.supportsFlash
+        )
 
         setLensOptions(selectableLenses)
 
@@ -334,81 +374,192 @@ export function PublicEventCamera({
       streamRef.current?.getTracks().forEach((track) => track.stop())
       streamRef.current = null
     }
-  }, [error, isLoadingState, photoLimit, photosLeft, selectedLensDeviceId])
+  }, [isLoadingState, photoLimit, selectedLensDeviceId])
+
+  async function processQueuedCaptures() {
+    if (isProcessingRef.current) return
+    isProcessingRef.current = true
+
+    try {
+      while (pendingCapturesRef.current.length > 0) {
+        const item = pendingCapturesRef.current.shift()
+        if (!item) continue
+
+        try {
+          const effectedBlob = await applyDisposableFilmEffectToBlob(
+            item.rawBlob
+          )
+          const compressedBlob = await compressPhotoForUpload(
+            effectedBlob,
+            MAX_UPLOAD_PHOTO_BYTES
+          )
+
+          if (compressedBlob.size > MAX_UPLOAD_PHOTO_BYTES) {
+            throw new Error(
+              "Unable to compress photo to 1MB. Try another lens."
+            )
+          }
+
+          const file = new File([compressedBlob], `capture-${item.id}.jpg`, {
+            type: "image/jpeg",
+          })
+
+          processedCapturesRef.current.push({
+            id: item.id,
+            takenAt: item.takenAt,
+            file,
+            attempts: 0,
+          })
+        } catch {
+          setFailedCapturesCount((prev) => prev + 1)
+          setQueuedCapturesCount((prev) => Math.max(0, prev - 1))
+          setUploadErrorToast("A capture failed to process and was skipped.")
+        }
+      }
+    } finally {
+      isProcessingRef.current = false
+      scheduleUploadIfIdle()
+    }
+  }
+
+  async function uploadProcessedCaptures() {
+    if (isUploadingRef.current || !fingerprint) return
+    if (pendingCapturesRef.current.length > 0 || isProcessingRef.current) return
+    if (!processedCapturesRef.current.length) return
+    isUploadingRef.current = true
+
+    try {
+      while (processedCapturesRef.current.length > 0) {
+        const item = processedCapturesRef.current[0]
+        const formData = new FormData()
+        formData.append("file", item.file)
+        formData.append("fingerprint", fingerprint)
+        formData.append("takenAt", item.takenAt)
+
+        try {
+          const response = await fetch(`/events/${eventId}/public/capture`, {
+            method: "POST",
+            credentials: "include",
+            body: formData,
+          })
+
+          if (!response.ok) {
+            const contentType = response.headers.get("content-type") ?? ""
+            const errorBody = contentType.includes("application/json")
+              ? ((await response
+                  .json()
+                  .catch(() => ({}))) as CapturePhotoErrorResponse)
+              : {}
+
+            if (
+              response.status === 409 &&
+              errorBody.code === "PHOTO_LIMIT_REACHED"
+            ) {
+              router.replace(`/events/${eventId}/public?limitReached=1`)
+              return
+            }
+
+            throw new Error(errorBody.error ?? "Unable to save photo")
+          }
+
+          const body = await readJsonBody<CapturePhotoResponse>(
+            response,
+            "Unable to save photo"
+          )
+
+          processedCapturesRef.current.shift()
+          setQueuedCapturesCount((prev) => Math.max(0, prev - 1))
+          setPhotosTaken(body.photosTaken)
+          setPhotoLimit(body.photoLimit)
+
+          if (body.reachedLimit || body.photosTaken >= body.photoLimit) {
+            router.replace(`/events/${eventId}/public?limitReached=1`)
+            return
+          }
+        } catch (uploadError) {
+          item.attempts += 1
+          if (item.attempts < 3) {
+            await new Promise((resolve) => window.setTimeout(resolve, 400))
+            continue
+          }
+
+          processedCapturesRef.current.shift()
+          setQueuedCapturesCount((prev) => Math.max(0, prev - 1))
+          setFailedCapturesCount((prev) => prev + 1)
+          setUploadErrorToast(
+            uploadError instanceof Error
+              ? `Capture failed after retries: ${uploadError.message}`
+              : "Capture failed after retries."
+          )
+        }
+      }
+    } finally {
+      isUploadingRef.current = false
+    }
+  }
+
+  function scheduleUploadIfIdle() {
+    if (uploadTimerRef.current) window.clearTimeout(uploadTimerRef.current)
+    uploadTimerRef.current = window.setTimeout(() => {
+      void uploadProcessedCaptures()
+    }, 300)
+  }
 
   async function handleCapture() {
-    if (isSubmitting || !isCameraReady || !fingerprint) return
+    if (
+      isCapturing ||
+      !isCameraReady ||
+      !fingerprint ||
+      captureSlotsLeft <= 0
+    ) {
+      return
+    }
 
     setError("")
-    setIsSubmitting(true)
+    setIsCapturing(true)
 
     try {
       const captureTrack = streamRef.current?.getVideoTracks()[0] ?? null
-      if (!captureTrack) throw new Error("Unable to access camera track")
+      const video = videoRef.current
+      if (!captureTrack || !video) throw new Error("Unable to access camera")
 
-      const blob = await captureImage(captureTrack)
-      const compressedBlob = await compressPhotoForUpload(
-        blob,
-        MAX_UPLOAD_PHOTO_BYTES
-      )
+      setFlashActive(true)
+      const rawBlob = await captureImageFastFromVideo(video, captureTrack)
+      window.setTimeout(() => setFlashActive(false), 40)
 
-      if (compressedBlob.size > MAX_UPLOAD_PHOTO_BYTES) {
-        throw new Error("Unable to compress photo to 1MB. Try another lens.")
+      const freezeUrl = URL.createObjectURL(rawBlob)
+      if (freezeUrlRef.current) URL.revokeObjectURL(freezeUrlRef.current)
+      freezeUrlRef.current = freezeUrl
+      setFreezeFrameUrl(freezeUrl)
+      window.setTimeout(() => {
+        setFreezeFrameUrl((current) => {
+          if (current !== freezeUrl) return current
+          URL.revokeObjectURL(freezeUrl)
+          if (freezeUrlRef.current === freezeUrl) freezeUrlRef.current = null
+          return null
+        })
+      }, 140)
+
+      const captureId = `${Date.now()}-${captureIdRef.current}`
+      captureIdRef.current += 1
+      const queued: QueuedCapture = {
+        id: captureId,
+        takenAt: new Date().toISOString(),
+        rawBlob,
       }
 
-      const fileName = `capture-${Date.now()}.jpg`
-      const file = new File([compressedBlob], fileName, { type: "image/jpeg" })
-      const takenAt = new Date().toISOString()
-
-      const formData = new FormData()
-      formData.append("file", file)
-      formData.append("fingerprint", fingerprint)
-      formData.append("takenAt", takenAt)
-
-      const response = await fetch(`/events/${eventId}/public/capture`, {
-        method: "POST",
-        credentials: "include",
-        body: formData,
-      })
-
-      if (!response.ok) {
-        const contentType = response.headers.get("content-type") ?? ""
-        const errorBody = contentType.includes("application/json")
-          ? ((await response
-              .json()
-              .catch(() => ({}))) as CapturePhotoErrorResponse)
-          : {}
-
-        if (
-          response.status === 409 &&
-          errorBody.code === "PHOTO_LIMIT_REACHED"
-        ) {
-          router.replace(`/events/${eventId}/public?limitReached=1`)
-          return
-        }
-
-        throw new Error(errorBody.error ?? "Unable to save photo")
-      }
-
-      const body = await readJsonBody<CapturePhotoResponse>(
-        response,
-        "Unable to save photo"
-      )
-
-      setPhotosTaken(body.photosTaken)
-      setPhotoLimit(body.photoLimit)
-
-      if (body.reachedLimit || body.photosTaken >= body.photoLimit) {
-        router.replace(`/events/${eventId}/public?limitReached=1`)
-      }
+      pendingCapturesRef.current.push(queued)
+      setQueuedCapturesCount((prev) => prev + 1)
+      void processQueuedCaptures()
     } catch (captureError) {
+      setFlashActive(false)
       setError(
         captureError instanceof Error
           ? captureError.message
-          : "Unable to save photo"
+          : "Unable to capture photo"
       )
     } finally {
-      setIsSubmitting(false)
+      setIsCapturing(false)
     }
   }
 
@@ -432,13 +583,24 @@ export function PublicEventCamera({
           </div>
 
           <div className="flex justify-center">
-            <div className="h-44 w-60 overflow-hidden rounded-md border-4 border-black/20 bg-black">
+            <div className="relative h-44 w-60 overflow-hidden rounded-md border-4 border-black/20 bg-black">
+              {freezeFrameUrl && (
+                <img
+                  src={freezeFrameUrl}
+                  alt=""
+                  aria-hidden
+                  className="pointer-events-none absolute z-10 h-44 w-60 object-cover"
+                />
+              )}
+              {flashActive && (
+                <div className="pointer-events-none absolute z-20 h-44 w-60 bg-white/70" />
+              )}
               <video
                 ref={videoRef}
                 playsInline
                 muted
                 autoPlay
-                className="h-full w-full object-cover"
+                className="relative h-full w-full object-cover"
               />
             </div>
           </div>
@@ -457,7 +619,7 @@ export function PublicEventCamera({
                 setError("")
                 setSelectedLensDeviceId(event.target.value)
               }}
-              disabled={isSubmitting || !lensOptions.length}
+              disabled={isCapturing || !lensOptions.length}
               className="h-10 w-full rounded-md border border-black/20 bg-white/90 px-3 text-sm text-black disabled:cursor-not-allowed disabled:opacity-60"
             >
               {!lensOptions.length && (
@@ -480,9 +642,9 @@ export function PublicEventCamera({
               onClick={handleCapture}
               disabled={
                 !isCameraReady ||
-                isSubmitting ||
+                isCapturing ||
                 isLoadingState ||
-                photosLeft <= 0
+                captureSlotsLeft <= 0
               }
             >
               <HugeiconsIcon icon={Camera01Icon} size={22} />
@@ -496,8 +658,20 @@ export function PublicEventCamera({
                 </span>
               </p>
               <p className="text-sm text-black/80">
-                {photosLeft} exposure{photosLeft === 1 ? "" : "s"} left
+                {captureSlotsLeft} exposure{captureSlotsLeft === 1 ? "" : "s"}{" "}
+                left
               </p>
+              {!!queuedCapturesCount && (
+                <p className="text-xs text-black/70">
+                  {queuedCapturesCount} queued for processing/upload
+                </p>
+              )}
+              {!!failedCapturesCount && (
+                <p className="text-xs text-destructive">
+                  {failedCapturesCount} capture
+                  {failedCapturesCount === 1 ? "" : "s"} failed
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -519,6 +693,21 @@ export function PublicEventCamera({
         )}
         {error && (
           <p className="mt-3 text-center text-sm text-destructive">{error}</p>
+        )}
+        {uploadErrorToast && (
+          <div className="fixed right-4 bottom-4 z-50 rounded-md border bg-background px-4 py-3 text-sm shadow-lg">
+            <p className="font-medium text-destructive">
+              Capture upload failed
+            </p>
+            <p>{uploadErrorToast}</p>
+            <button
+              type="button"
+              className="mt-2 text-xs text-muted-foreground underline"
+              onClick={() => setUploadErrorToast("")}
+            >
+              Dismiss
+            </button>
+          </div>
         )}
       </div>
     </div>
