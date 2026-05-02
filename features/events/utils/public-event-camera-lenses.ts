@@ -6,7 +6,7 @@ export type LensOption = {
 
 const FRONT_CAMERA_LABEL_HINTS = ["front", "user", "selfie"]
 
-function isFrontCameraLabel(label: string): boolean {
+export function isLikelyFrontCameraLabel(label: string): boolean {
   const normalized = label.trim().toLowerCase()
   return FRONT_CAMERA_LABEL_HINTS.some((hint) => normalized.includes(hint))
 }
@@ -51,7 +51,6 @@ export async function listLensOptions(): Promise<LensOption[]> {
       label: device.label || `Camera ${index + 1}`,
       supportsFlash: false,
     }))
-    .filter((device) => !isFrontCameraLabel(device.label))
 }
 
 export async function probeRearLensesWithFlash(
@@ -70,7 +69,7 @@ export async function probeRearLensesWithFlash(
       const facingMode = track.getSettings?.().facingMode
       const isRearLens =
         facingMode === "environment" ||
-        (facingMode !== "user" && !isFrontCameraLabel(lens.label))
+        (facingMode !== "user" && !isLikelyFrontCameraLabel(lens.label))
 
       if (!isRearLens) continue
 

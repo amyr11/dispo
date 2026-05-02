@@ -9,12 +9,15 @@ type DisposableFilmProfile = {
   exposure: number,
   contrast: number,
   saturation: number,
+  tintR: number,
+  tintG: number,
+  tintB: number,
+  tintStrength: number,
   warmth: number,
   fade: number,
   blurPx: number,
   blurMix: number,
   grain: number,
-  blackPoint: number,
   whitePoint: number,
   whiteTintR: number,
   whiteTintG: number,
@@ -108,19 +111,22 @@ function createDisposableFilmProfile(): DisposableFilmProfile {
 
   return {
     seed,
-    exposure: randomBetween(random, -0.05, 0.09),
+    exposure: randomBetween(random, -0.05, 0.03),
     contrast: randomBetween(random, 0.9, 1.08),
-    saturation: randomBetween(random, 0.82, 1.12),
-    warmth: randomBetween(random, 0.02, 0.17),
-    fade: randomBetween(random, 0.01, 0.08),
+    saturation: randomBetween(random, 0.89, 1.0),
+    tintR: randomBetween(random, 0.99, 1.0),
+    tintG: randomBetween(random, 1.0, 1.25),
+    tintB: randomBetween(random, 0.97, 0.995),
+    tintStrength: randomBetween(random, 0.15, 0.2),
+    warmth: randomBetween(random, 0.2, 0.24),
+    fade: randomBetween(random, 0.01, 0.03),
     blurPx: randomBetween(random, 0.15, 5.4),
     blurMix: 1,
     grain: randomBetween(random, 0.05, 0.1),
-    blackPoint: randomBetween(random, 0.04, 0.2),
     whitePoint: randomBetween(random, 0.86, 0.90),
-    whiteTintR: randomBetween(random, 0.98, 1.0),
-    whiteTintG: randomBetween(random, 0.94, 0.985),
-    whiteTintB: randomBetween(random, 0.75, 0.85),
+    whiteTintR: randomBetween(random, 0.97, 0.995),
+    whiteTintG: randomBetween(random, 0.97, 1.0),
+    whiteTintB: randomBetween(random, 0.82, 0.88),
     highlightKnee: randomBetween(random, 0.7, 0.82),
     highlightSoftness: randomBetween(random, 1.7, 3.1),
     vignette: randomBetween(random, 0.1, 0.28),
@@ -181,6 +187,10 @@ function applyDisposableFilmEffect(
       green = (green - 0.5) * profile.contrast + 0.5
       blue = (blue - 0.5) * profile.contrast + 0.5
 
+      red = mix(red, red * profile.tintR, profile.tintStrength)
+      green = mix(green, green * profile.tintG, profile.tintStrength)
+      blue = mix(blue, blue * profile.tintB, profile.tintStrength)
+
       red *= 1 + profile.warmth * 0.6
       green *= 1 + profile.warmth * 0.22
       blue *= 1 - profile.warmth * 0.5
@@ -226,14 +236,6 @@ function applyDisposableFilmEffect(
       red = mix(red, profile.whitePoint * profile.whiteTintR, highlightAmount * 0.65)
       green = mix(green, profile.whitePoint * profile.whiteTintG, highlightAmount * 0.65)
       blue = mix(blue, profile.whitePoint * profile.whiteTintB, highlightAmount * 0.65)
-
-      const valley = Math.min(red, green, blue)
-      if (valley < profile.blackPoint) {
-        const lift = profile.blackPoint - valley
-        red += lift
-        green += lift
-        blue += lift
-      }
 
       data[index] = Math.round(clamp01(red) * 255)
       data[index + 1] = Math.round(clamp01(green) * 255)

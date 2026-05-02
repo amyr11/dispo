@@ -12,6 +12,7 @@ import {
 } from "@/features/events/utils/capture-image"
 import {
   type LensOption,
+  isLikelyFrontCameraLabel,
   listLensOptions,
   openCameraStreamByDeviceId,
   openEnvironmentStream,
@@ -41,6 +42,29 @@ type CapturePhotoResponse = {
 type CapturePhotoErrorResponse = {
   error?: string
   code?: string
+}
+
+function isPhoneDevice(): boolean {
+  if (typeof navigator === "undefined") return false
+
+  const navigatorWithUAData = navigator as Navigator & {
+    userAgentData?: { mobile?: boolean }
+  }
+
+  if (navigatorWithUAData.userAgentData?.mobile) return true
+  return /android|iphone|ipod|mobile/i.test(navigator.userAgent)
+}
+
+function isFrontFacingStream(stream: MediaStream, lensLabel?: string): boolean {
+  const [track] = stream.getVideoTracks()
+  if (!track) return false
+
+  const facingMode = track.getSettings?.().facingMode
+  if (facingMode === "user") return true
+  if (facingMode === "environment") return false
+
+  if (lensLabel) return isLikelyFrontCameraLabel(lensLabel)
+  return false
 }
 
 async function readErrorMessage(
@@ -167,33 +191,109 @@ export function PublicEventCamera({
     async function startCamera() {
       try {
         setIsCameraReady(false)
+        setError("")
 
         const lenses = await listLensOptions()
         const rearLenses = await probeRearLensesWithFlash(lenses)
-        const firstFlashLens = rearLenses.find((lens) => lens.supportsFlash)
+        const isPhone = isPhoneDevice()
+        const labelByDeviceId = new Map(
+          lenses.map((lens) => [lens.deviceId, lens.label] as const)
+        )
 
-        if (!rearLenses.length) {
-          throw new Error("No rear camera lenses detected on this device.")
-        }
+        const nonFrontLenses = lenses.filter(
+          (lens) => !isLikelyFrontCameraLabel(lens.label)
+        )
+        const flashByDeviceId = new Map(
+          rearLenses.map((lens) => [lens.deviceId, lens.supportsFlash] as const)
+        )
+        const selectableLenses = nonFrontLenses.map((lens) => ({
+          ...lens,
+          supportsFlash: flashByDeviceId.get(lens.deviceId) ?? false,
+        }))
+        const firstFlashLens = selectableLenses.find((lens) => lens.supportsFlash)
 
-        setLensOptions(rearLenses)
+        setLensOptions(selectableLenses)
 
-        const validSelectedLens = rearLenses.find(
+        const validSelectedLens = selectableLenses.find(
           (lens) => lens.deviceId === selectedLensDeviceId
         )
-
-        const nextLensDeviceId =
+        const preferredLensDeviceId =
           validSelectedLens?.deviceId ??
           firstFlashLens?.deviceId ??
-          rearLenses[0].deviceId
+          selectableLenses[0]?.deviceId
 
-        if (selectedLensDeviceId !== nextLensDeviceId) {
-          setSelectedLensDeviceId(nextLensDeviceId)
+        if (
+          preferredLensDeviceId &&
+          preferredLensDeviceId !== selectedLensDeviceId
+        ) {
+          setSelectedLensDeviceId(preferredLensDeviceId)
         }
 
-        const stream = await openCameraStreamByDeviceId(nextLensDeviceId).catch(
-          () => openEnvironmentStream()
-        )
+        const candidateDeviceIds: string[] = []
+        const addCandidate = (deviceId?: string) => {
+          if (!deviceId) return
+          if (candidateDeviceIds.includes(deviceId)) return
+          candidateDeviceIds.push(deviceId)
+        }
+
+        addCandidate(preferredLensDeviceId)
+        addCandidate(validSelectedLens?.deviceId)
+        addCandidate(firstFlashLens?.deviceId)
+        rearLenses.forEach((lens) => addCandidate(lens.deviceId))
+        nonFrontLenses.forEach((lens) => addCandidate(lens.deviceId))
+        lenses.forEach((lens) => addCandidate(lens.deviceId))
+
+        let stream: MediaStream | null = null
+
+        for (const deviceId of candidateDeviceIds) {
+          if (stream) break
+
+          try {
+            const nextStream = await openCameraStreamByDeviceId(deviceId)
+            const lensLabel = labelByDeviceId.get(deviceId)
+
+            if (isPhone && isFrontFacingStream(nextStream, lensLabel)) {
+              nextStream.getTracks().forEach((track) => track.stop())
+              continue
+            }
+
+            stream = nextStream
+          } catch {
+            // Continue through all fallback options.
+          }
+        }
+
+        if (!stream) {
+          try {
+            stream = await openEnvironmentStream()
+
+            if (isPhone && isFrontFacingStream(stream)) {
+              stream.getTracks().forEach((track) => track.stop())
+              stream = null
+            }
+          } catch {
+            stream = null
+          }
+        }
+
+        if (!stream) {
+          throw new Error(
+            "No rear camera lenses detected on this device. Please allow camera access and try again."
+          )
+        }
+
+        const activeTrack = stream.getVideoTracks()[0]
+        const activeDeviceId = activeTrack?.getSettings?.().deviceId
+
+        if (activeDeviceId) {
+          const matchedLens = selectableLenses.find(
+            (lens) => lens.deviceId === activeDeviceId
+          )
+
+          if (matchedLens && matchedLens.deviceId !== selectedLensDeviceId) {
+            setSelectedLensDeviceId(matchedLens.deviceId)
+          }
+        }
 
         if (!active) {
           stream.getTracks().forEach((track) => track.stop())
@@ -208,13 +308,9 @@ export function PublicEventCamera({
           throw new Error("Unable to render camera preview")
         }
 
-        const [track] = stream.getVideoTracks()
-        const currentFacingMode = track.getSettings?.().facingMode
-
-        if (currentFacingMode === "user") {
-          throw new Error(
-            "Front cameras are not allowed. Please select a rear lens."
-          )
+        if (isPhone && isFrontFacingStream(stream)) {
+          stream.getTracks().forEach((track) => track.stop())
+          throw new Error("Front cameras are not allowed on phones.")
         }
 
         video.srcObject = stream
@@ -364,7 +460,9 @@ export function PublicEventCamera({
               disabled={isSubmitting || !lensOptions.length}
               className="h-10 w-full rounded-md border border-black/20 bg-white/90 px-3 text-sm text-black disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {!lensOptions.length && <option value="">Detecting cameras…</option>}
+              {!lensOptions.length && (
+                <option value="">Detecting cameras…</option>
+              )}
               {lensOptions.map((lens) => (
                 <option key={lens.deviceId} value={lens.deviceId}>
                   {lens.label}
