@@ -30,6 +30,256 @@ type CapturePhotoErrorResponse = {
 
 type MediaTrackCapabilitiesWithTorch = MediaTrackCapabilities & {
   torch?: boolean
+  zoom?: MediaSettingsRange
+}
+
+type FillLightModeLike = "auto" | "off" | "flash"
+
+type LensOption = {
+  deviceId: string
+  label: string
+}
+
+const MAX_UPLOAD_PHOTO_BYTES = 1 * 1024 * 1024
+const JPEG_QUALITY_STEPS = [0.88, 0.8, 0.72, 0.64, 0.56, 0.48, 0.4]
+const MAX_RESIZE_PASSES = 6
+const MAX_BASE_DIMENSION = 2560
+const RESIZE_SCALE_STEP = 0.82
+const frontCameraLabelHints = ["front", "user", "selfie"]
+
+function isFrontCameraLabel(label: string): boolean {
+  const normalized = label.trim().toLowerCase()
+  return frontCameraLabelHints.some((hint) => normalized.includes(hint))
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms))
+}
+
+async function openCameraStreamByDeviceId(deviceId: string): Promise<MediaStream> {
+  return navigator.mediaDevices.getUserMedia({
+    video: {
+      deviceId: {
+        exact: deviceId,
+      },
+    },
+    audio: false,
+  })
+}
+
+async function listLensOptions(): Promise<LensOption[]> {
+  if (!navigator.mediaDevices?.enumerateDevices) {
+    return []
+  }
+
+  const devices = await navigator.mediaDevices.enumerateDevices()
+  const videoInputs = devices.filter((device) => device.kind === "videoinput")
+
+  return videoInputs
+    .map((device, index) => ({
+      deviceId: device.deviceId,
+      label: device.label || `Camera ${index + 1}`,
+    }))
+    .filter((device) => !isFrontCameraLabel(device.label))
+}
+
+async function probeBackFacingLenses(
+  lenses: LensOption[]
+): Promise<{ rearLenses: LensOption[]; flashLensDeviceId: string | null }> {
+  const rearLenses: LensOption[] = []
+  let flashLensDeviceId: string | null = null
+
+  for (const lens of lenses) {
+    let stream: MediaStream | null = null
+
+    try {
+      stream = await openCameraStreamByDeviceId(lens.deviceId)
+      const [track] = stream.getVideoTracks()
+
+      if (!track) {
+        continue
+      }
+
+      // Give Chrome a moment to populate capabilities/settings reliably.
+      await sleep(70)
+
+      const settings = track.getSettings?.()
+      const capabilities =
+        track.getCapabilities?.() as MediaTrackCapabilitiesWithTorch
+      const isRearLens =
+        settings?.facingMode === "environment" ||
+        (settings?.facingMode !== "user" && !isFrontCameraLabel(lens.label))
+
+      if (!isRearLens) {
+        continue
+      }
+
+      rearLenses.push(lens)
+      if (!flashLensDeviceId && capabilities?.torch === true) {
+        flashLensDeviceId = lens.deviceId
+      }
+    } catch {
+      // Ignore lenses that cannot be opened/probed.
+    } finally {
+      stream?.getTracks().forEach((track) => track.stop())
+    }
+  }
+
+  return { rearLenses, flashLensDeviceId }
+}
+
+async function openEnvironmentStream(): Promise<MediaStream> {
+  const environmentExact: MediaStreamConstraints = {
+    video: {
+      facingMode: {
+        exact: "environment",
+      },
+    },
+    audio: false,
+  }
+  const environmentIdeal: MediaStreamConstraints = {
+    video: {
+      facingMode: {
+        ideal: "environment",
+      },
+    },
+    audio: false,
+  }
+
+  return navigator.mediaDevices
+    .getUserMedia(environmentExact)
+    .catch(() => navigator.mediaDevices.getUserMedia(environmentIdeal))
+}
+
+async function forceTorchOff(track: MediaStreamTrack): Promise<void> {
+  try {
+    await track.applyConstraints({
+      advanced: [{ torch: false } as MediaTrackConstraintSet],
+    })
+  } catch {
+    // Ignore torch-off failures.
+  }
+}
+
+type ImageCaptureLike = {
+  takePhoto: (photoSettings?: {
+    fillLightMode?: FillLightModeLike
+    imageHeight?: number
+    imageWidth?: number
+    redEyeReduction?: boolean
+  }) => Promise<Blob>
+  getPhotoCapabilities?: () => Promise<{
+    fillLightMode?: FillLightModeLike[]
+  }>
+}
+
+type WindowWithImageCapture = Window & {
+  ImageCapture?: new (track: MediaStreamTrack) => ImageCaptureLike
+}
+
+function getImageCaptureInstance(
+  track: MediaStreamTrack
+): ImageCaptureLike | null {
+  const imageCaptureConstructor = (window as WindowWithImageCapture).ImageCapture
+  if (!imageCaptureConstructor) {
+    return null
+  }
+
+  try {
+    return new imageCaptureConstructor(track)
+  } catch {
+    return null
+  }
+}
+
+async function getPreferredFillLightMode(
+  imageCapture: ImageCaptureLike
+): Promise<FillLightModeLike | null> {
+  try {
+    const modes = (await imageCapture.getPhotoCapabilities?.())?.fillLightMode
+    if (!modes?.length) return null
+    if (modes.includes("flash")) return "flash"
+    if (modes.includes("off")) return "off"
+    return null
+  } catch {
+    return null
+  }
+}
+
+function toJpegBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error("Unable to compress photo"))
+          return
+        }
+        resolve(blob)
+      },
+      "image/jpeg",
+      quality
+    )
+  })
+}
+
+function getInitialScale(width: number, height: number): number {
+  const longestSide = Math.max(width, height)
+  if (longestSide <= MAX_BASE_DIMENSION) {
+    return 1
+  }
+  return MAX_BASE_DIMENSION / longestSide
+}
+
+async function compressPhotoForUpload(
+  blob: Blob,
+  maxBytes: number
+): Promise<Blob> {
+  if (blob.size <= maxBytes) {
+    return blob
+  }
+
+  const bitmap = await createImageBitmap(blob)
+  const canvas = document.createElement("canvas")
+  const context = canvas.getContext("2d")
+
+  if (!context) {
+    bitmap.close()
+    throw new Error("Unable to prepare photo compression")
+  }
+
+  let scale = getInitialScale(bitmap.width, bitmap.height)
+  let bestBlob: Blob | null = null
+
+  try {
+    for (let pass = 0; pass < MAX_RESIZE_PASSES; pass += 1) {
+      const targetWidth = Math.max(1, Math.round(bitmap.width * scale))
+      const targetHeight = Math.max(1, Math.round(bitmap.height * scale))
+      canvas.width = targetWidth
+      canvas.height = targetHeight
+      context.clearRect(0, 0, targetWidth, targetHeight)
+      context.drawImage(bitmap, 0, 0, targetWidth, targetHeight)
+
+      for (const quality of JPEG_QUALITY_STEPS) {
+        const candidate = await toJpegBlob(canvas, quality)
+        if (!bestBlob || candidate.size < bestBlob.size) {
+          bestBlob = candidate
+        }
+        if (candidate.size <= maxBytes) {
+          return candidate
+        }
+      }
+
+      scale *= RESIZE_SCALE_STEP
+    }
+  } finally {
+    bitmap.close()
+  }
+
+  if (bestBlob) {
+    return bestBlob
+  }
+
+  throw new Error("Unable to compress photo")
 }
 
 async function readErrorMessage(
@@ -61,27 +311,9 @@ async function readJsonBody<T>(
   return (await response.json()) as T
 }
 
-function toBlob(canvas: HTMLCanvasElement): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          reject(new Error("Unable to capture photo"))
-          return
-        }
-
-        resolve(blob)
-      },
-      "image/jpeg",
-      0.92
-    )
-  })
-}
-
 export function PublicEventCamera({ eventId, eventName }: PublicEventCameraProps) {
   const router = useRouter()
   const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const [error, setError] = useState("")
   const [isLoadingState, setIsLoadingState] = useState(true)
@@ -89,6 +321,8 @@ export function PublicEventCamera({ eventId, eventName }: PublicEventCameraProps
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isFlashSupported, setIsFlashSupported] = useState(false)
   const [isFlashForced, setIsFlashForced] = useState(false)
+  const [lensOptions, setLensOptions] = useState<LensOption[]>([])
+  const [selectedLensDeviceId, setSelectedLensDeviceId] = useState("")
   const [fingerprint] = useState(() => {
     if (typeof window === "undefined") return ""
 
@@ -171,26 +405,35 @@ export function PublicEventCamera({ eventId, eventName }: PublicEventCameraProps
 
     async function startCamera() {
       try {
-        const environmentExact: MediaStreamConstraints = {
-          video: {
-            facingMode: {
-              exact: "environment",
-            },
-          },
-          audio: false,
-        }
-        const environmentIdeal: MediaStreamConstraints = {
-          video: {
-            facingMode: {
-              ideal: "environment",
-            },
-          },
-          audio: false,
+        setIsCameraReady(false)
+        setIsFlashSupported(false)
+        setIsFlashForced(false)
+        const lenses = await listLensOptions()
+        const { rearLenses, flashLensDeviceId } = await probeBackFacingLenses(
+          lenses
+        )
+        const availableLenses = rearLenses.length ? rearLenses : lenses
+
+        if (!availableLenses.length) {
+          throw new Error("No rear camera lenses detected on this device.")
         }
 
-        const stream = await navigator.mediaDevices
-          .getUserMedia(environmentExact)
-          .catch(() => navigator.mediaDevices.getUserMedia(environmentIdeal))
+        setLensOptions(availableLenses)
+
+        const validSelectedLens = availableLenses.find(
+          (lens) => lens.deviceId === selectedLensDeviceId
+        )
+        const nextLensDeviceId =
+          validSelectedLens?.deviceId ??
+          flashLensDeviceId ??
+          availableLenses[0].deviceId
+
+        if (selectedLensDeviceId !== nextLensDeviceId) {
+          setSelectedLensDeviceId(nextLensDeviceId)
+        }
+
+        const stream = await openCameraStreamByDeviceId(nextLensDeviceId)
+          .catch(() => openEnvironmentStream())
 
         if (!active) {
           stream.getTracks().forEach((track) => track.stop())
@@ -209,23 +452,50 @@ export function PublicEventCamera({ eventId, eventName }: PublicEventCameraProps
         const [track] = stream.getVideoTracks()
         const capabilities =
           track.getCapabilities?.() as MediaTrackCapabilitiesWithTorch
+        const currentDeviceId = track.getSettings?.().deviceId ?? ""
+        const currentFacingMode = track.getSettings?.().facingMode
+        const zoomRange = capabilities?.zoom
+        const minZoom = zoomRange?.min
+        const maxZoom = zoomRange?.max
 
-        if (capabilities?.torch) {
-          setIsFlashSupported(true)
+        if (currentFacingMode === "user") {
+          throw new Error("Front cameras are not allowed. Please select a rear lens.")
+        }
+        if (!availableLenses.some((lens) => lens.deviceId === currentDeviceId)) {
+          throw new Error("Front cameras are not allowed. Please select a rear lens.")
+        }
 
+        if (
+          typeof minZoom === "number" &&
+          typeof maxZoom === "number" &&
+          minZoom <= 1 &&
+          maxZoom >= 1
+        ) {
           try {
             await track.applyConstraints({
-              advanced: [{ torch: true } as MediaTrackConstraintSet],
+              advanced: [{ zoom: 1 } as MediaTrackConstraintSet],
             })
-            setIsFlashForced(true)
           } catch {
-            setIsFlashForced(false)
+            // Ignore zoom constraint failures and continue camera startup.
           }
         }
-      } catch {
+
+        const torchSupported = capabilities?.torch === true
+        const imageCapture = getImageCaptureInstance(track)
+        const fillLightMode = imageCapture
+          ? await getPreferredFillLightMode(imageCapture)
+          : null
+        setIsFlashSupported(torchSupported || fillLightMode === "flash")
+        if (torchSupported) {
+          await forceTorchOff(track)
+        }
+        setIsFlashForced(false)
+      } catch (cameraError) {
         if (!active) return
         setError(
-          "Camera access failed. Please allow camera permissions and try again."
+          cameraError instanceof Error
+            ? cameraError.message
+            : "Camera access failed. Please allow camera permissions and try again."
         )
       }
     }
@@ -237,37 +507,58 @@ export function PublicEventCamera({ eventId, eventName }: PublicEventCameraProps
       streamRef.current?.getTracks().forEach((track) => track.stop())
       streamRef.current = null
     }
-  }, [error, isLoadingState, photoLimit, photosLeft])
+  }, [error, isLoadingState, photoLimit, photosLeft, selectedLensDeviceId])
 
   async function handleCapture() {
     if (isSubmitting || !isCameraReady || !fingerprint) return
 
     const video = videoRef.current
-    const canvas = canvasRef.current
 
-    if (!video || !canvas) {
+    if (!video) {
       setError("Camera is not ready yet")
       return
     }
 
     setError("")
     setIsSubmitting(true)
+    let captureTrack: MediaStreamTrack | null = null
 
     try {
-      const width = video.videoWidth || 1280
-      const height = video.videoHeight || 720
-      canvas.width = width
-      canvas.height = height
-      const context = canvas.getContext("2d")
-
-      if (!context) {
-        throw new Error("Unable to prepare camera frame")
+      captureTrack = streamRef.current?.getVideoTracks()[0] ?? null
+      if (!captureTrack) {
+        throw new Error("Unable to access camera track")
       }
 
-      context.drawImage(video, 0, 0, width, height)
-      const blob = await toBlob(canvas)
+      const imageCapture = getImageCaptureInstance(captureTrack)
+      if (!imageCapture) {
+        throw new Error("ImageCapture is not supported on this device/browser")
+      }
+
+      const fillLightMode = await getPreferredFillLightMode(imageCapture)
+      const canUseFlash = fillLightMode === "flash"
+      setIsFlashSupported(
+        canUseFlash ||
+          (
+            captureTrack.getCapabilities?.() as MediaTrackCapabilitiesWithTorch
+          )?.torch === true
+      )
+      setIsFlashForced(canUseFlash)
+      const blob = await imageCapture.takePhoto(
+        fillLightMode ? { fillLightMode } : undefined
+      )
+      setIsFlashForced(false)
+
+      const compressedBlob = await compressPhotoForUpload(
+        blob,
+        MAX_UPLOAD_PHOTO_BYTES
+      )
+      if (compressedBlob.size > MAX_UPLOAD_PHOTO_BYTES) {
+        throw new Error("Unable to compress photo to 1MB. Try another lens.")
+      }
       const fileName = `capture-${Date.now()}.jpg`
-      const file = new File([blob], fileName, { type: "image/jpeg" })
+      const file = new File([compressedBlob], fileName, {
+        type: "image/jpeg",
+      })
       const takenAt = new Date().toISOString()
       const formData = new FormData()
       formData.append("file", file)
@@ -314,6 +605,7 @@ export function PublicEventCamera({ eventId, eventName }: PublicEventCameraProps
           : "Unable to save photo"
       )
     } finally {
+      setIsFlashForced(false)
       setIsSubmitting(false)
     }
   }
@@ -339,7 +631,7 @@ export function PublicEventCamera({ eventId, eventName }: PublicEventCameraProps
               {isFlashSupported
                 ? isFlashForced
                   ? "Flash on"
-                  : "Flash unavailable"
+                  : "Flash ready"
                 : "No flash support"}
             </div>
           </div>
@@ -356,7 +648,31 @@ export function PublicEventCamera({ eventId, eventName }: PublicEventCameraProps
             </div>
           </div>
 
-          <canvas ref={canvasRef} className="hidden" />
+          <div className="mt-3">
+            <label
+              htmlFor="lens-picker"
+              className="mb-1 block text-xs uppercase tracking-[0.12em] text-black/70"
+            >
+              Lens
+            </label>
+            <select
+              id="lens-picker"
+              value={selectedLensDeviceId}
+              onChange={(event) => {
+                setError("")
+                setSelectedLensDeviceId(event.target.value)
+              }}
+              disabled={isSubmitting || !lensOptions.length}
+              className="h-10 w-full rounded-md border border-black/20 bg-white/90 px-3 text-sm text-black disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {!lensOptions.length && <option value="">Detecting cameras…</option>}
+              {lensOptions.map((lens) => (
+                <option key={lens.deviceId} value={lens.deviceId}>
+                  {lens.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div className="mt-5 flex flex-col items-center gap-4">
             <Button
