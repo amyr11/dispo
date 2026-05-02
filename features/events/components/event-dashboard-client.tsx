@@ -51,9 +51,7 @@ export function EventDashboardClient({ eventId }: { eventId: number }) {
         </Link>
         <div className="flex items-center gap-2">
           <DeleteEventDialog eventId={event.id} />
-          <div hidden={isPast(event.eventStart)}>
-            <EditEventDialog event={event} />
-          </div>
+          <EditEventDialog event={event} />
           {eventStatus !== "Ended" && (
             <ShareEventDialog
               eventId={event.id}
@@ -69,7 +67,7 @@ export function EventDashboardClient({ eventId }: { eventId: number }) {
         <p className="text-sm">{formatDate(event.eventStart)}</p>
       </div>
       <div className="flex flex-col gap-2 py-8 sm:flex-row">
-        <Clickable disabled={!isPast(event.eventStart)}>
+        <Clickable disabled={eventStatus === "Upcoming"}>
           <Link href="#">
             <StatsCard
               icon={UserGroup02Icon}

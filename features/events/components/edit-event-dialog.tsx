@@ -30,6 +30,7 @@ import {
   DEFAULT_MAX_PHOTO_LIMIT,
 } from "../constants/event-constants"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { getEventStatus } from "@/features/events/utils/event-status"
 
 type FormErrors = Partial<Record<keyof CreateEventInput, string>>
 
@@ -51,8 +52,16 @@ function validate(form: CreateEventInput): FormErrors {
   return errors
 }
 
+function validateNameOnly(form: Pick<CreateEventInput, "eventName">): FormErrors {
+  const errors: FormErrors = {}
+  if (!form.eventName.trim()) errors.eventName = "Event name is required."
+  return errors
+}
+
 export function EditEventDialog({ event }: { event: Event }) {
   const normalizedEventStart = event.eventStart.slice(0, 10)
+  const eventStatus = getEventStatus(event.eventStart)
+  const isOnlyNameEditable = eventStatus === "Ongoing" || eventStatus === "Ended"
 
   const initialForm: CreateEventInput = {
     eventName: event.eventName,
@@ -70,7 +79,7 @@ export function EditEventDialog({ event }: { event: Event }) {
   const queryClient = useQueryClient()
 
   const mutation = useMutation({
-    mutationFn: (input: CreateEventInput) => updateEvent(event.id, input),
+    mutationFn: (input: Partial<CreateEventInput>) => updateEvent(event.id, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] })
       setOpen(false)
@@ -102,12 +111,18 @@ export function EditEventDialog({ event }: { event: Event }) {
   }
 
   function handleSubmit() {
-    const validationErrors = validate(form)
+    const payload: Partial<CreateEventInput> = isOnlyNameEditable
+      ? { eventName: form.eventName }
+      : form
+
+    const validationErrors = isOnlyNameEditable
+      ? validateNameOnly({ eventName: form.eventName })
+      : validate(form)
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors)
       return
     }
-    mutation.mutate(form)
+    mutation.mutate(payload)
   }
 
   function handleOpenChange(next: boolean) {
@@ -161,6 +176,7 @@ export function EditEventDialog({ event }: { event: Event }) {
                 type="date"
                 value={form.eventStart}
                 onChange={handleChange}
+                disabled={isOnlyNameEditable}
               />
               {errors.eventStart && (
                 <p className="text-sm text-destructive">{errors.eventStart}</p>
@@ -176,6 +192,7 @@ export function EditEventDialog({ event }: { event: Event }) {
                 onChange={handleChange}
                 min={1}
                 max={DEFAULT_MAX_ATTENDEES}
+                disabled={isOnlyNameEditable}
               />
               {errors.attendeeLimit && (
                 <p className="text-sm text-destructive">
@@ -193,6 +210,7 @@ export function EditEventDialog({ event }: { event: Event }) {
                 onChange={handleChange}
                 min={1}
                 max={DEFAULT_MAX_PHOTO_LIMIT}
+                disabled={isOnlyNameEditable}
               />
               {errors.photoLimit && (
                 <p className="text-sm text-destructive">{errors.photoLimit}</p>
@@ -205,6 +223,7 @@ export function EditEventDialog({ event }: { event: Event }) {
                 name="password"
                 value={form.password}
                 onChange={handleChange}
+                disabled={isOnlyNameEditable}
               />
               {errors.password && (
                 <p className="text-sm text-destructive">{errors.password}</p>

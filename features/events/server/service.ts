@@ -5,6 +5,7 @@ import {
   ConflictError,
   NotFoundError,
   UnauthorizedError,
+  ValidationError,
 } from "@/features/events/server/errors"
 import {
   CreateEventInput,
@@ -65,6 +66,29 @@ export const eventsService = {
   },
 
   async updateEvent(userId: string, eventId: number, input: UpdateEventInput) {
+    const event = await this.getEventById(userId, eventId)
+    const eventStatus = getEventStatus(event.eventStart)
+    const isOnlyNameEditable =
+      eventStatus === "Ongoing" || eventStatus === "Ended"
+
+    if (isOnlyNameEditable) {
+      const hasNonNameEdits =
+        input.eventStart !== undefined ||
+        input.attendeeLimit !== undefined ||
+        input.photoLimit !== undefined ||
+        input.password !== undefined
+
+      if (hasNonNameEdits) {
+        throw new ValidationError(
+          "Only eventName can be edited once the event is ongoing or ended"
+        )
+      }
+
+      if (input.eventName === undefined) {
+        throw new ValidationError("eventName is required")
+      }
+    }
+
     const result = await eventsRepository.updateByIdAndUserId(
       eventId,
       userId,
