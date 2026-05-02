@@ -73,6 +73,13 @@ function asOptionalISODate(value: unknown, field: string): string | undefined {
   return asISODate(value, field)
 }
 
+function asBlob(value: unknown, field: string): Blob {
+  if (!(value instanceof Blob)) {
+    throw new ValidationError(`${field} is required`)
+  }
+  return value
+}
+
 export function parseCreateEventInput(payload: unknown): CreateEventInput {
   const input = (payload ?? {}) as Record<string, unknown>
 
@@ -118,5 +125,21 @@ export function parseJoinPublicEventInput(
     password: asString(input.password, "password"),
     nickname: asNickname(input.nickname),
     fingerprint: asUuid(input.fingerprint, "fingerprint"),
+  }
+}
+
+export function parsePublicPhotoFingerprint(value: unknown): string {
+  return asUuid(value, "fingerprint")
+}
+
+export function parsePublicPhotoCaptureFormData(formData: FormData): {
+  file: Blob
+  fingerprint: string
+  takenAt: string
+} {
+  return {
+    file: asBlob(formData.get("file"), "file"),
+    fingerprint: parsePublicPhotoFingerprint(formData.get("fingerprint")),
+    takenAt: asISODate(formData.get("takenAt"), "takenAt"),
   }
 }

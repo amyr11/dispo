@@ -2,8 +2,14 @@ import { prisma } from "@/lib/prisma"
 import {
   CreateEventInput,
   JoinPublicEventInput,
+  PublicAttendeeCaptureState,
   UpdateEventInput,
 } from "@/features/events/server/types"
+
+const attendeePublicSelect = {
+  nickname: true,
+  fingerprint: true,
+} as const
 
 export const eventsRepository = {
   findManyByUserId(userId: string) {
@@ -79,6 +85,7 @@ export const eventsRepository = {
       SELECT COUNT(*)::int AS count
       FROM photos
       WHERE "eventId" = ${eventId}
+        AND deleted = false
     `
     return rows[0]?.count ?? 0
   },
@@ -91,6 +98,7 @@ export const eventsRepository = {
           fingerprint,
         },
       },
+      select: attendeePublicSelect,
     })
   },
 
@@ -102,6 +110,7 @@ export const eventsRepository = {
           nickname,
         },
       },
+      select: attendeePublicSelect,
     })
   },
 
@@ -112,6 +121,103 @@ export const eventsRepository = {
         nickname: input.nickname,
         fingerprint: input.fingerprint,
       },
+      select: attendeePublicSelect,
+    })
+  },
+
+  async getPublicAttendeeCaptureState(
+    eventId: number,
+    fingerprint: string
+  ): Promise<PublicAttendeeCaptureState | null> {
+    const rows = await prisma.$queryRaw<
+      Array<{ shotsTaken: number; photoLimit: number; revealAt: Date }>
+    >`
+      SELECT
+        COALESCE(COUNT(p.id), 0)::int AS "shotsTaken",
+        e."photoLimit"::int AS "photoLimit",
+        e."revealAt" AS "revealAt"
+      FROM attendees a
+      INNER JOIN events e ON e.id = a."eventId"
+      LEFT JOIN photos p
+        ON p."attendeeId" = a.id
+       AND p.deleted = false
+      WHERE a."eventId" = ${eventId}
+        AND a.fingerprint = ${fingerprint}
+      GROUP BY e."photoLimit", e."revealAt"
+      LIMIT 1
+    `
+
+    const attendee = rows[0]
+
+    if (!attendee) {
+      return null
+    }
+
+    return {
+      shotsTaken: attendee.shotsTaken,
+      photoLimit: attendee.photoLimit,
+      revealAt: attendee.revealAt,
+    }
+  },
+
+  async createPublicAttendeePhotoAndIncrementCounter(input: {
+    eventId: number
+    fingerprint: string
+    takenAt: Date
+    storagePath: string
+  }): Promise<
+    | { status: "captured"; shotsTaken: number; photoLimit: number }
+    | { status: "limit-reached"; shotsTaken: number; photoLimit: number }
+    | { status: "not-found" }
+  > {
+    return prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<
+        Array<{ attendeeId: bigint; photoLimit: number }>
+      >`
+        SELECT
+          a.id AS "attendeeId",
+          e."photoLimit"::int AS "photoLimit"
+        FROM attendees a
+        INNER JOIN events e ON e.id = a."eventId"
+        WHERE a."eventId" = ${input.eventId}
+          AND a.fingerprint = ${input.fingerprint}
+        LIMIT 1
+        FOR UPDATE
+      `
+
+      const attendee = rows[0]
+
+      if (!attendee) {
+        return { status: "not-found" }
+      }
+
+      const countRows = await tx.$queryRaw<Array<{ shotsTaken: number }>>`
+        SELECT COUNT(*)::int AS "shotsTaken"
+        FROM photos
+        WHERE "attendeeId" = ${attendee.attendeeId}
+          AND deleted = false
+      `
+
+      const shotsTaken = countRows[0]?.shotsTaken ?? 0
+
+      if (shotsTaken >= attendee.photoLimit) {
+        return {
+          status: "limit-reached",
+          shotsTaken,
+          photoLimit: attendee.photoLimit,
+        }
+      }
+
+      await tx.$executeRaw`
+        INSERT INTO photos ("deleted", "takenAt", "eventId", "attendeeId", "storagePath")
+        VALUES (false, ${input.takenAt}, ${input.eventId}, ${attendee.attendeeId}, ${input.storagePath})
+      `
+
+      return {
+        status: "captured",
+        shotsTaken: shotsTaken + 1,
+        photoLimit: attendee.photoLimit,
+      }
     })
   },
 }

@@ -1,22 +1,64 @@
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
+
+const PUBLIC_PHOTOS_BUCKET = "photos-bucket"
 
 export const eventsStorageProvider = {
-  async deleteEventFolder(eventId: number) {
-    const supabase = await createClient()
-    const bucket = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET
+  async deleteEventFolder(userId: string, eventId: number) {
+    const adminClient = createAdminClient()
+    const supabase = adminClient ?? (await createClient())
+    const fallbackBucket = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET
+    const folder = `${userId}/${eventId}`
 
-    if (!bucket) return
-
-    const folder = `events/${eventId}`
-    const { data: existing, error: listError } = await supabase.storage
-      .from(bucket)
-      .list(folder, { limit: 1000 })
-
-    if (listError || !existing || existing.length === 0) {
-      return
+    const buckets = new Set([PUBLIC_PHOTOS_BUCKET])
+    if (fallbackBucket) {
+      buckets.add(fallbackBucket)
     }
 
-    const paths = existing.map((item) => `${folder}/${item.name}`)
-    await supabase.storage.from(bucket).remove(paths)
+    for (const bucket of buckets) {
+      const { data: existing, error: listError } = await supabase.storage
+        .from(bucket)
+        .list(folder, { limit: 1000 })
+
+      if (listError || !existing || existing.length === 0) {
+        continue
+      }
+
+      const paths = existing.map((item) => `${folder}/${item.name}`)
+      await supabase.storage.from(bucket).remove(paths)
+    }
+  },
+
+  buildPublicPhotoStoragePath(
+    userId: string,
+    eventId: number,
+    takenAt: Date
+  ): string {
+    const safeTimestamp = takenAt.toISOString().replaceAll(":", "-")
+    return `${userId}/${eventId}/${safeTimestamp}-${crypto.randomUUID()}.jpg`
+  },
+
+  async uploadPublicPhoto(path: string, file: Blob) {
+    const adminClient = createAdminClient()
+    const supabase = adminClient ?? (await createClient())
+    const bytes = Buffer.from(await file.arrayBuffer())
+    const contentType = file.type || "image/jpeg"
+
+    const { error } = await supabase.storage
+      .from(PUBLIC_PHOTOS_BUCKET)
+      .upload(path, bytes, {
+        contentType,
+        upsert: false,
+      })
+
+    if (error) {
+      throw new Error(error.message || "Unable to upload photo")
+    }
+  },
+
+  async deletePublicPhoto(path: string) {
+    const adminClient = createAdminClient()
+    const supabase = adminClient ?? (await createClient())
+    await supabase.storage.from(PUBLIC_PHOTOS_BUCKET).remove([path])
   },
 }

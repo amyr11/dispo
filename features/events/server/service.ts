@@ -9,6 +9,7 @@ import {
 import {
   CreateEventInput,
   JoinPublicEventInput,
+  PublicPhotoCaptureInput,
   UpdateEventInput,
 } from "@/features/events/server/types"
 import { getEventStatus } from "@/features/events/utils/event-status"
@@ -84,7 +85,7 @@ export const eventsService = {
       throw new NotFoundError("Event not found")
     }
 
-    await eventsStorageProvider.deleteEventFolder(eventId)
+    await eventsStorageProvider.deleteEventFolder(userId, eventId)
   },
 
   async getEventStats(userId: string, eventId: number) {
@@ -183,6 +184,76 @@ export const eventsService = {
         throw new ConflictError("Nickname is already taken for this event")
       }
 
+      throw error
+    }
+  },
+
+  async getPublicAttendeeCaptureState(eventId: number, fingerprint: string) {
+    const attendeeState = await eventsRepository.getPublicAttendeeCaptureState(
+      eventId,
+      fingerprint
+    )
+
+    if (!attendeeState) {
+      throw new NotFoundError("Attendee not found")
+    }
+
+    return attendeeState
+  },
+
+  async capturePublicEventPhoto(
+    eventId: number,
+    input: PublicPhotoCaptureInput & { file: Blob }
+  ) {
+    const event = await this.getPublicEventById(eventId)
+    const eventStatus = getEventStatus(event.eventStart)
+
+    if (eventStatus !== "Ongoing") {
+      throw new ConflictError("This event is not accepting photos right now")
+    }
+
+    const takenAt = new Date(input.takenAt)
+    const storagePath = eventsStorageProvider.buildPublicPhotoStoragePath(
+      event.userId,
+      eventId,
+      takenAt
+    )
+
+    try {
+      await eventsStorageProvider.uploadPublicPhoto(storagePath, input.file)
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message.toLowerCase().includes("row-level security policy")
+      ) {
+        throw new ConflictError(
+          "Photo upload is blocked by Supabase Storage policy. Allow uploads to photos-bucket or configure a service-role uploader."
+        )
+      }
+
+      throw error
+    }
+
+    try {
+      const result =
+        await eventsRepository.createPublicAttendeePhotoAndIncrementCounter({
+          eventId,
+          fingerprint: input.fingerprint,
+          takenAt,
+          storagePath,
+        })
+
+      if (result.status === "not-found") {
+        throw new NotFoundError("Attendee not found")
+      }
+
+      if (result.status === "limit-reached") {
+        throw new ConflictError("You have reached the photo limit for this event")
+      }
+
+      return result
+    } catch (error) {
+      await eventsStorageProvider.deletePublicPhoto(storagePath).catch(() => null)
       throw error
     }
   },

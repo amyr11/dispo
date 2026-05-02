@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import EventBadge from "@/features/events/components/event-badge"
+import {
+  attendeeFingerprintKey,
+  attendeeNicknameKey,
+  getOrCreatePublicAttendeeFingerprint,
+  getStoredPublicAttendeeValue,
+  setStoredPublicAttendeeValue,
+} from "@/features/events/utils/public-attendee-storage"
 import { formatDate } from "@/lib/utils/date-utils"
 
 type PublicEventPasswordFormProps = {
@@ -25,69 +32,6 @@ type JoinResponse = {
   }
 }
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-
-function attendeeFingerprintKey(eventId: number): string {
-  return `dispo_public_event_${eventId}_fingerprint`
-}
-
-function attendeeNicknameKey(eventId: number): string {
-  return `dispo_public_event_${eventId}_nickname`
-}
-
-function getStoredValue(key: string): string {
-  try {
-    return window.localStorage.getItem(key) ?? ""
-  } catch {
-    return ""
-  }
-}
-
-function setStoredValue(key: string, value: string) {
-  try {
-    window.localStorage.setItem(key, value)
-  } catch {
-    // localStorage can be unavailable in private browsing; the cookie still keeps access.
-  }
-}
-
-function createFingerprint(): string {
-  const browserCrypto = globalThis.crypto
-
-  if (typeof browserCrypto.randomUUID === "function") {
-    return browserCrypto.randomUUID()
-  }
-
-  const bytes = browserCrypto.getRandomValues(new Uint8Array(16))
-  bytes[6] = (bytes[6] & 0x0f) | 0x40
-  bytes[8] = (bytes[8] & 0x3f) | 0x80
-  const hex = Array.from(bytes, (byte) =>
-    byte.toString(16).padStart(2, "0")
-  ).join("")
-
-  return [
-    hex.slice(0, 8),
-    hex.slice(8, 12),
-    hex.slice(12, 16),
-    hex.slice(16, 20),
-    hex.slice(20),
-  ].join("-")
-}
-
-function getOrCreateFingerprint(eventId: number): string {
-  const key = attendeeFingerprintKey(eventId)
-  const storedFingerprint = getStoredValue(key)
-
-  if (UUID_PATTERN.test(storedFingerprint)) {
-    return storedFingerprint.toLowerCase()
-  }
-
-  const fingerprint = createFingerprint()
-  setStoredValue(key, fingerprint)
-  return fingerprint
-}
-
 export function PublicEventPasswordForm({
   eventId,
   eventName,
@@ -97,7 +41,7 @@ export function PublicEventPasswordForm({
   const [step, setStep] = useState<JoinStep>("password")
   const [password, setPassword] = useState("")
   const [nickname, setNickname] = useState(() =>
-    getStoredValue(attendeeNicknameKey(eventId))
+    getStoredPublicAttendeeValue(attendeeNicknameKey(eventId))
   )
   const [error, setError] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -129,7 +73,7 @@ export function PublicEventPasswordForm({
         return
       }
 
-      const fingerprint = getOrCreateFingerprint(eventId)
+      const fingerprint = getOrCreatePublicAttendeeFingerprint(eventId)
       const response = await fetch(`/api/events/${eventId}/public/join`, {
         method: "POST",
         credentials: "include",
@@ -151,8 +95,14 @@ export function PublicEventPasswordForm({
       }
 
       const body = (await response.json()) as JoinResponse
-      setStoredValue(attendeeFingerprintKey(eventId), body.attendee.fingerprint)
-      setStoredValue(attendeeNicknameKey(eventId), body.attendee.nickname)
+      setStoredPublicAttendeeValue(
+        attendeeFingerprintKey(eventId),
+        body.attendee.fingerprint
+      )
+      setStoredPublicAttendeeValue(
+        attendeeNicknameKey(eventId),
+        body.attendee.nickname
+      )
       router.refresh()
     } catch (error) {
       setError(

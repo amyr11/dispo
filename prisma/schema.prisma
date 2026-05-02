@@ -23,14 +23,25 @@ model Event {
 }
 
 model Attendee {
+  id          BigInt   @unique @default(autoincrement()) @db.BigInt
   nickname    String
   fingerprint String
   joinedAt    DateTime @default(now()) @map("joinedAt") @db.Timestamptz(6)
   eventId     Int      @map("eventId")
-  photosTaken Int      @default(0) @map("photosTaken")
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@id([eventId, fingerprint])
   @@unique([eventId, nickname])
   @@map("attendees")
+}
+
+model Photo {
+  id          BigInt   @id @default(autoincrement()) @db.BigInt
+  deleted     Boolean  @default(false)
+  takenAt     DateTime @map("takenAt") @db.Timestamptz(6)
+  eventId     BigInt   @map("eventId") @db.BigInt
+  attendeeId  BigInt   @map("attendeeId") @db.BigInt
+  storagePath String   @map("storagePath")
+
+  @@map("photos")
 }

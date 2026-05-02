@@ -15,7 +15,6 @@ export type AttendeeRecord = {
   fingerprint: string
   joinedAt: Date
   eventId: number
-  photosTaken: number
 }
 
 export type CreateEventInput = {
@@ -32,4 +31,15 @@ export type JoinPublicEventInput = {
   password: string
   nickname: string
   fingerprint: string
+}
+
+export type PublicPhotoCaptureInput = {
+  fingerprint: string
+  takenAt: string
+}
+
+export type PublicAttendeeCaptureState = {
+  shotsTaken: number
+  photoLimit: number
+  revealAt: Date
 }

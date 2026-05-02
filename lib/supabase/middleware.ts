@@ -8,6 +8,14 @@ function isPublicEventRoute(pathname: string): boolean {
   return /^\/events\/\d+\/public\/?$/.test(pathname)
 }
 
+function isPublicEventCameraRoute(pathname: string): boolean {
+  return /^\/events\/\d+\/public\/camera\/?$/.test(pathname)
+}
+
+function isPublicEventCaptureRoute(pathname: string): boolean {
+  return /^\/events\/\d+\/public\/capture\/?$/.test(pathname)
+}
+
 function isPublicEventApiRoute(pathname: string): boolean {
   return /^\/api\/events\/\d+\/public\/(verify|join)\/?$/.test(pathname)
 }
@@ -58,6 +66,8 @@ export async function updateSession(request: NextRequest) {
       (route) => pathname === route || pathname.startsWith(`${route}/`)
     ) ||
     isPublicEventRoute(pathname) ||
+    isPublicEventCameraRoute(pathname) ||
+    isPublicEventCaptureRoute(pathname) ||
     isPublicEventApiRoute(pathname)
 
   // Redirect to login ONLY if there is no user AND the route is NOT public

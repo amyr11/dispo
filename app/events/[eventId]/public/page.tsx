@@ -7,10 +7,10 @@ import {
   UserGroup02Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon, IconSvgElement } from "@hugeicons/react"
-import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import EventBadge from "@/features/events/components/event-badge"
 import { PublicEventCountdown } from "@/features/events/components/public-event-countdown"
+import { PublicEventTakePhotosPanel } from "@/features/events/components/public-event-take-photos-panel"
 import { PublicEventPasswordForm } from "@/features/events/components/public-event-password-form"
 import { NotFoundError, ValidationError } from "@/features/events/server/errors"
 import { parseEventId } from "@/features/events/server/params"
@@ -87,10 +87,16 @@ function PublicEventEndedNotice({
 
 export default async function PublicEventPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ eventId: string }>
+  searchParams?: Promise<{ limitReached?: string; cameraError?: string }>
 }) {
   const { eventId } = await params
+  const resolvedSearchParams = (await searchParams) ?? {}
+  const hasLimitReachedNotice = resolvedSearchParams.limitReached === "1"
+  const hasMissingAttendeeNotice =
+    resolvedSearchParams.cameraError === "missing-attendee"
 
   let eventIdNum: number
   try {
@@ -182,22 +188,18 @@ export default async function PublicEventPage({
         />
       </section>
 
-      <section className="flex flex-col items-center gap-4 pt-6 text-center">
-        <p className="text-xl">Start making memories!</p>
-        <Button type="button" className="w-40">
-          <HugeiconsIcon icon={Camera01Icon} size={16} />
-          Take photos
-        </Button>
-        <div className="flex flex-col items-center gap-1">
-          <p className="font-heading text-5xl leading-none font-semibold">
-            0
-            <span className="ml-1 text-base font-normal">
-              / {event.photoLimit}
-            </span>
-          </p>
-          <p className="text-sm">Shots taken</p>
-        </div>
-      </section>
+      {hasMissingAttendeeNotice && (
+        <p className="pt-4 text-center text-sm text-destructive">
+          Attendee session missing. Rejoin the event before taking photos.
+        </p>
+      )}
+
+      <PublicEventTakePhotosPanel
+        eventId={event.id}
+        photoLimit={event.photoLimit}
+        revealAt={event.revealAt.toISOString()}
+        limitReachedNotice={hasLimitReachedNotice}
+      />
     </PublicEventFrame>
   )
 }
