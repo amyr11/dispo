@@ -93,7 +93,7 @@ export async function captureImage(
   track: MediaStreamTrack,
   options?: CaptureImageOptions
 ): Promise<Blob> {
-  const { flashTimeout = 300 } = options ?? {}
+  const { flashTimeout = 750 } = options ?? {}
   const capabilities = getTorchCapabilities(track)
   const hasTorch = capabilities.torch === true
   const stream = new MediaStream([track])
