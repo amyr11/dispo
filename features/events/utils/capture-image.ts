@@ -143,6 +143,10 @@ function randomBetween(random: () => number, min: number, max: number): number {
   return mix(min, max, random())
 }
 
+function randomInt(random: () => number, min: number, max: number): number {
+  return Math.floor(randomBetween(random, min, max + 1))
+}
+
 function applySoftHighlightKnee(
   value: number,
   knee: number,
@@ -193,6 +197,304 @@ function createDisposableFilmProfile(): DisposableFilmProfile {
   }
 }
 
+function drawEdgeContactBurn(
+  context: OffscreenCanvasRenderingContext2D,
+  width: number,
+  height: number,
+  edge: number,
+  alpha: number,
+  depth: number,
+  extents?: number[]
+): void {
+  context.save()
+  context.globalCompositeOperation = "color-dodge"
+
+  if ((edge === 2 || edge === 3) && extents && extents.length > 1) {
+    const shape = new Path2D()
+    const pointCount = extents.length
+    const yStep = height / (pointCount - 1)
+    const lockScale = Math.max(0.08, Math.min(1, depth / Math.max(1, width)))
+
+    if (edge === 2) {
+      shape.moveTo(0, 0)
+      shape.lineTo((extents[0] ?? 0) * lockScale, 0)
+      for (let pointIndex = 1; pointIndex < pointCount; pointIndex += 1) {
+        const prevY = (pointIndex - 1) * yStep
+        const currY = pointIndex * yStep
+        const midY = (prevY + currY) * 0.5
+        const prevExtent = (extents[pointIndex - 1] ?? 0) * lockScale
+        const currExtent = (extents[pointIndex] ?? 0) * lockScale
+        shape.quadraticCurveTo(prevExtent, prevY, (prevExtent + currExtent) * 0.5, midY)
+      }
+      shape.lineTo(0, height)
+    } else {
+      shape.moveTo(width, 0)
+      shape.lineTo(width - (extents[0] ?? 0) * lockScale, 0)
+      for (let pointIndex = 1; pointIndex < pointCount; pointIndex += 1) {
+        const prevY = (pointIndex - 1) * yStep
+        const currY = pointIndex * yStep
+        const midY = (prevY + currY) * 0.5
+        const prevX = width - (extents[pointIndex - 1] ?? 0) * lockScale
+        const currX = width - (extents[pointIndex] ?? 0) * lockScale
+        shape.quadraticCurveTo(prevX, prevY, (prevX + currX) * 0.5, midY)
+      }
+      shape.lineTo(width, height)
+    }
+    shape.closePath()
+
+    const gradient = context.createLinearGradient(
+      edge === 2 ? 0 : width,
+      0,
+      edge === 2 ? depth : width - depth,
+      0
+    )
+    gradient.addColorStop(0, `rgba(255, 255, 250, ${alpha})`)
+    gradient.addColorStop(0.35, `rgba(255, 190, 108, ${alpha * 0.82})`)
+    gradient.addColorStop(1, "rgba(255, 86, 24, 0)")
+    context.fillStyle = gradient
+    context.fill(shape)
+  } else if (edge === 0) {
+    const gradient = context.createLinearGradient(0, 0, 0, depth)
+    gradient.addColorStop(0, `rgba(255, 255, 250, ${alpha})`)
+    gradient.addColorStop(0.28, `rgba(255, 190, 108, ${alpha * 0.82})`)
+    gradient.addColorStop(1, "rgba(255, 86, 24, 0)")
+    context.fillStyle = gradient
+    context.fillRect(0, 0, width, depth)
+  } else if (edge === 1) {
+    const gradient = context.createLinearGradient(0, height, 0, height - depth)
+    gradient.addColorStop(0, `rgba(255, 255, 250, ${alpha})`)
+    gradient.addColorStop(0.28, `rgba(255, 190, 108, ${alpha * 0.82})`)
+    gradient.addColorStop(1, "rgba(255, 86, 24, 0)")
+    context.fillStyle = gradient
+    context.fillRect(0, height - depth, width, depth)
+  } else if (edge === 2) {
+    const gradient = context.createLinearGradient(0, 0, depth, 0)
+    gradient.addColorStop(0, `rgba(255, 255, 250, ${alpha})`)
+    gradient.addColorStop(0.28, `rgba(255, 190, 108, ${alpha * 0.82})`)
+    gradient.addColorStop(1, "rgba(255, 86, 24, 0)")
+    context.fillStyle = gradient
+    context.fillRect(0, 0, depth, height)
+  } else {
+    const gradient = context.createLinearGradient(width, 0, width - depth, 0)
+    gradient.addColorStop(0, `rgba(255, 255, 250, ${alpha})`)
+    gradient.addColorStop(0.28, `rgba(255, 190, 108, ${alpha * 0.82})`)
+    gradient.addColorStop(1, "rgba(255, 86, 24, 0)")
+    context.fillStyle = gradient
+    context.fillRect(width - depth, 0, depth, height)
+  }
+
+  context.restore()
+}
+
+function drawEdgeLightBurns(
+  context: OffscreenCanvasRenderingContext2D,
+  width: number,
+  height: number,
+  seed: number
+): void {
+  const random = createSeededRandom(seed ^ 0x6a09e667)
+  const shouldRenderBurn = random() < 0.9
+  if (!shouldRenderBurn) return
+
+  // Use non-seeded side pick so consecutive photos do not feel biased to one side.
+  const edge = Math.random() < 0.5 ? 2 : 3 // vertical sides only: left or right
+  const isThinBurn = random() < 0.8
+  const thinVariant = isThinBurn ? randomInt(random, 0, 3) : 0
+  const depthRatio = isThinBurn
+    ? randomBetween(random, 0.016, 0.055)
+    : randomBetween(random, 0.08, 0.17)
+  const glowAlpha = isThinBurn
+    ? randomBetween(random, 0.8, 1)
+    : randomBetween(random, 0.5, 0.74)
+  const coreAlpha = isThinBurn
+    ? randomBetween(random, 0.86, 1)
+    : randomBetween(random, 0.56, 0.76)
+  const edgeLockAlpha = isThinBurn
+    ? randomBetween(random, 0.82, 1)
+    : randomBetween(random, 0.56, 0.74)
+  const edgeLockDepthRatio = isThinBurn
+    ? randomBetween(random, 0.01, 0.03)
+    : randomBetween(random, 0.04, 0.08)
+  const depth = width * depthRatio
+  const jitterScale = isThinBurn
+    ? Math.max(6, depth * 0.7)
+    : Math.max(10, depth * 0.5)
+  const waveA = randomBetween(random, 0.8, 1.9)
+  const waveB = randomBetween(random, 2.3, 5.4)
+  const waveC = randomBetween(random, 4.8, 9.2)
+  const wavePhase = randomBetween(random, 0, Math.PI * 2)
+  const waveOffset = randomBetween(random, -depth * 0.2, depth * 0.22)
+  const pointCount = isThinBurn ? 34 : 44
+  const yStep = height / (pointCount - 1)
+  const extents: number[] = []
+
+  for (let pointIndex = 0; pointIndex < pointCount; pointIndex += 1) {
+    const y = pointIndex * yStep
+    const normalizedY = y / Math.max(1, height - 1)
+    const wave1 = Math.sin((normalizedY * Math.PI * 2 * waveA) + wavePhase) * jitterScale
+    const wave2 = Math.sin((normalizedY * Math.PI * 2 * waveB) + wavePhase * 0.63) * jitterScale * 0.45
+    const wave3 = Math.sin((normalizedY * Math.PI * 2 * waveC) + wavePhase * 1.41) * jitterScale * 0.24
+    const chaos = (random() - 0.5) * jitterScale * 1.05
+    const trendBend = Math.sin((normalizedY * Math.PI) + wavePhase * 0.2) * jitterScale * 0.18
+    const burnExtent = Math.max(
+      3,
+      depth + wave1 + wave2 + wave3 + chaos + waveOffset + trendBend
+    )
+    extents.push(burnExtent)
+  }
+
+  const buildBurnShape = (scale: number): Path2D => {
+    const shape = new Path2D()
+    if (edge === 2) {
+      shape.moveTo(0, 0)
+      shape.lineTo((extents[0] ?? 0) * scale, 0)
+      for (let pointIndex = 1; pointIndex < pointCount; pointIndex += 1) {
+        const prevY = (pointIndex - 1) * yStep
+        const currY = pointIndex * yStep
+        const midY = (prevY + currY) * 0.5
+        const prevExtent = (extents[pointIndex - 1] ?? 0) * scale
+        const currExtent = (extents[pointIndex] ?? 0) * scale
+        shape.quadraticCurveTo(
+          prevExtent,
+          prevY,
+          (prevExtent + currExtent) * 0.5,
+          midY
+        )
+      }
+      shape.quadraticCurveTo(
+        (extents[pointCount - 2] ?? (extents[pointCount - 1] ?? 0)) * scale,
+        (pointCount - 2) * yStep,
+        (extents[pointCount - 1] ?? 0) * scale,
+        height
+      )
+      shape.lineTo(0, height)
+    } else {
+      shape.moveTo(width, 0)
+      shape.lineTo(width - (extents[0] ?? 0) * scale, 0)
+      for (let pointIndex = 1; pointIndex < pointCount; pointIndex += 1) {
+        const prevY = (pointIndex - 1) * yStep
+        const currY = pointIndex * yStep
+        const midY = (prevY + currY) * 0.5
+        const prevX = width - (extents[pointIndex - 1] ?? 0) * scale
+        const currX = width - (extents[pointIndex] ?? 0) * scale
+        shape.quadraticCurveTo(
+          prevX,
+          prevY,
+          (prevX + currX) * 0.5,
+          midY
+        )
+      }
+      shape.quadraticCurveTo(
+        width - (extents[pointCount - 2] ?? (extents[pointCount - 1] ?? 0)) * scale,
+        (pointCount - 2) * yStep,
+        width - (extents[pointCount - 1] ?? 0) * scale,
+        height
+      )
+      shape.lineTo(width, height)
+    }
+    shape.closePath()
+    return shape
+  }
+
+  context.save()
+  context.globalCompositeOperation = "color-dodge"
+
+  const burnShape = buildBurnShape(1)
+  const glowLayers = [
+    { scale: 0.12, color: "rgba(255, 255, 252, 1)", blurMin: 0.6, blurMax: 1.2 },
+    { scale: 0.44, color: `rgba(255, 182, 92, ${glowAlpha * 0.82})`, blurMin: 28, blurMax: 52 },
+    { scale: 0.62, color: `rgba(255, 112, 38, ${glowAlpha * 0.86})`, blurMin: 42, blurMax: 78 },
+    { scale: 0.82, color: `rgba(255, 64, 20, ${glowAlpha * 0.9})`, blurMin: 104, blurMax: 178 },
+    { scale: 1, color: `rgba(232, 34, 14, ${glowAlpha * 0.94})`, blurMin: 132, blurMax: 230 },
+  ]
+  const bigStreakBlurBoost = mix(
+    0,
+    120,
+    clamp01((depthRatio - 0.07) / 0.1)
+  )
+  glowLayers.forEach((layer, layerIndex) => {
+    let layerBlur = randomBetween(random, layer.blurMin, layer.blurMax)
+    if (layerIndex > 0) layerBlur += bigStreakBlurBoost
+    context.save()
+    context.filter = `blur(${layerBlur.toFixed(2)}px)`
+    context.fillStyle = layer.color
+    context.fill(buildBurnShape(layer.scale))
+    context.restore()
+  })
+
+  // Extra diffusion cloud to bury any remaining outer contour edges.
+  const extremeCloudPasses = 2
+  for (let cloudIndex = 0; cloudIndex < extremeCloudPasses; cloudIndex += 1) {
+    const cloudScale = randomBetween(random, 0.72, 1)
+    const cloudBlur = randomBetween(random, 170, 290) + bigStreakBlurBoost * 0.7
+    context.save()
+    context.filter = `blur(${cloudBlur.toFixed(2)}px)`
+    context.globalAlpha = randomBetween(random, 0.12, 0.24)
+    context.fillStyle = `rgba(255, 52, 18, ${glowAlpha})`
+    context.fill(buildBurnShape(cloudScale))
+    context.restore()
+  }
+
+  // Variable softness pass: smoothly mix softer and softer bands without hard edges.
+  const softnessBandCount = isThinBurn ? 10 : 14
+  for (let bandIndex = 0; bandIndex < softnessBandCount; bandIndex += 1) {
+    const y0 = (height / softnessBandCount) * bandIndex
+    const y1 = (height / softnessBandCount) * (bandIndex + 1)
+    const mid = (y0 + y1) * 0.5
+    const softnessSeed = Math.sin((mid / Math.max(1, height)) * Math.PI * 2.3 + wavePhase * 0.77)
+    const softnessNoise = (softnessSeed + 1) * 0.5
+    const softness = isThinBurn
+      ? mix(0.08, 0.5, softnessNoise)
+      : mix(0.45, 0.9, softnessNoise)
+
+    context.save()
+    context.beginPath()
+    context.rect(0, y0, width, y1 - y0)
+    context.clip()
+    context.filter = `blur(${mix(54, 170, softness).toFixed(2)}px)`
+    context.globalAlpha = mix(0.08, 0.2, softness)
+    context.fillStyle = `rgba(255, 78, 28, ${glowAlpha})`
+    context.fill(burnShape)
+    context.restore()
+  }
+
+  const coreDepth = depth * randomBetween(random, isThinBurn ? 0.2 : 0.4, isThinBurn ? 0.85 : 0.74)
+  const coreStart = isThinBurn ? 0.78 : 0.58
+  const thinCoreDepthCap = Math.max(3, width * randomBetween(random, 0.004, 0.009))
+  const enforcedCoreDepth = Math.min(coreDepth, thinCoreDepthCap)
+  const coreBand = context.createLinearGradient(
+    edge === 2 ? 0 : width,
+    0,
+    edge === 2 ? enforcedCoreDepth : width - enforcedCoreDepth,
+    0
+  )
+  coreBand.addColorStop(0, "rgba(255, 255, 255, 1)")
+  coreBand.addColorStop(coreStart, "rgba(255, 236, 205, 0.92)")
+  coreBand.addColorStop(1, "rgba(255, 180, 110, 0)")
+  context.save()
+  context.filter = "blur(0.9px)"
+  context.fillStyle = coreBand
+  context.globalAlpha = 1
+  context.fill(buildBurnShape(0.08))
+  context.restore()
+  context.globalAlpha = 1
+
+  context.restore()
+
+  const edgeLockDepth = isThinBurn
+    ? Math.max(14, Math.round(width * edgeLockDepthRatio))
+    : Math.max(16, Math.round(width * edgeLockDepthRatio))
+  drawEdgeContactBurn(
+    context,
+    width,
+    height,
+    edge,
+    edgeLockAlpha,
+    edgeLockDepth,
+    extents
+  )
+}
+
 function applyDisposableFilmEffect(
   context: OffscreenCanvasRenderingContext2D,
   width: number,
@@ -215,6 +517,9 @@ function applyDisposableFilmEffect(
       context.restore()
     }
   }
+
+  // Apply burns before pixel-level tone mapping so they obey highlight clipping.
+  drawEdgeLightBurns(context, width, height, profile.seed)
 
   const imageData = context.getImageData(0, 0, width, height)
   const data = imageData.data
