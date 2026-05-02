@@ -1,8 +1,12 @@
 import { ValidationError } from "@/features/events/server/errors"
 import {
   CreateEventInput,
+  JoinPublicEventInput,
   UpdateEventInput,
 } from "@/features/events/server/types"
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 function asString(value: unknown, field: string): string {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -48,6 +52,22 @@ function asISODate(value: unknown, field: string): string {
   return date.toISOString()
 }
 
+function asNickname(value: unknown): string {
+  const nickname = asString(value, "nickname")
+  if (nickname.length > 32) {
+    throw new ValidationError("nickname must be 32 characters or less")
+  }
+  return nickname
+}
+
+function asUuid(value: unknown, field: string): string {
+  const str = asString(value, field)
+  if (!UUID_PATTERN.test(str)) {
+    throw new ValidationError(`${field} must be a valid UUID`)
+  }
+  return str.toLowerCase()
+}
+
 function asOptionalISODate(value: unknown, field: string): string | undefined {
   if (value == null) return undefined
   return asISODate(value, field)
@@ -87,4 +107,16 @@ export function parseUpdateEventInput(payload: unknown): UpdateEventInput {
 export function parsePublicEventPasswordInput(payload: unknown): string {
   const input = (payload ?? {}) as Record<string, unknown>
   return asString(input.password, "password")
+}
+
+export function parseJoinPublicEventInput(
+  payload: unknown
+): JoinPublicEventInput {
+  const input = (payload ?? {}) as Record<string, unknown>
+
+  return {
+    password: asString(input.password, "password"),
+    nickname: asNickname(input.nickname),
+    fingerprint: asUuid(input.fingerprint, "fingerprint"),
+  }
 }

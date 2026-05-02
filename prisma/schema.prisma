@@ -8,15 +8,29 @@ datasource db {
 }
 
 model Event {
-  id            Int      @id @default(autoincrement())
-  userId        String   @map("user_id")
-  createdAt     DateTime @default(now()) @map("createdAt")
-  eventName     String   @map("eventName")
-  eventStart    DateTime @map("eventStart")
-  revealAt      DateTime @map("revealAt")
-  attendeeLimit Int      @map("attendeeLimit")
-  photoLimit    Int      @map("photoLimit")
+  id            Int        @id @default(autoincrement())
+  userId        String     @map("user_id")
+  createdAt     DateTime   @default(now()) @map("createdAt")
+  eventName     String     @map("eventName")
+  eventStart    DateTime   @map("eventStart")
+  revealAt      DateTime   @map("revealAt")
+  attendeeLimit Int        @map("attendeeLimit")
+  photoLimit    Int        @map("photoLimit")
   password      String
+  attendees     Attendee[]
 
   @@map("events")
+}
+
+model Attendee {
+  nickname    String
+  fingerprint String
+  joinedAt    DateTime @default(now()) @map("joinedAt") @db.Timestamptz(6)
+  eventId     Int      @map("eventId")
+  photosTaken Int      @default(0) @map("photosTaken")
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, fingerprint])
+  @@unique([eventId, nickname])
+  @@map("attendees")
 }

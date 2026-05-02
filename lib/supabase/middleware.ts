@@ -9,7 +9,7 @@ function isPublicEventRoute(pathname: string): boolean {
 }
 
 function isPublicEventApiRoute(pathname: string): boolean {
-  return /^\/api\/events\/\d+\/public\/verify\/?$/.test(pathname)
+  return /^\/api\/events\/\d+\/public\/(verify|join)\/?$/.test(pathname)
 }
 
 export async function updateSession(request: NextRequest) {

@@ -4,7 +4,7 @@ import { EventRecord } from "@/features/events/server/types"
 export const PUBLIC_EVENT_ACCESS_MAX_AGE = 60 * 60 * 24 * 7
 
 function tokenPayload(event: EventRecord): string {
-  return `${event.id}:${event.userId}:${event.createdAt.getTime()}`
+  return `public-event-attendee-v1:${event.id}:${event.userId}:${event.createdAt.getTime()}`
 }
 
 function createToken(event: EventRecord): string {

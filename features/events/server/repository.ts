@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import {
   CreateEventInput,
+  JoinPublicEventInput,
   UpdateEventInput,
 } from "@/features/events/server/types"
 
@@ -68,12 +69,9 @@ export const eventsRepository = {
   },
 
   async countAttendeesByEventId(eventId: number) {
-    const rows = await prisma.$queryRaw<Array<{ count: number }>>`
-      SELECT COUNT(*)::int AS count
-      FROM attendees
-      WHERE "eventId" = ${eventId}
-    `
-    return rows[0]?.count ?? 0
+    return prisma.attendee.count({
+      where: { eventId },
+    })
   },
 
   async countPhotosByEventId(eventId: number) {
@@ -83,5 +81,37 @@ export const eventsRepository = {
       WHERE "eventId" = ${eventId}
     `
     return rows[0]?.count ?? 0
+  },
+
+  findAttendeeByEventIdAndFingerprint(eventId: number, fingerprint: string) {
+    return prisma.attendee.findUnique({
+      where: {
+        eventId_fingerprint: {
+          eventId,
+          fingerprint,
+        },
+      },
+    })
+  },
+
+  findAttendeeByEventIdAndNickname(eventId: number, nickname: string) {
+    return prisma.attendee.findUnique({
+      where: {
+        eventId_nickname: {
+          eventId,
+          nickname,
+        },
+      },
+    })
+  },
+
+  createAttendee(eventId: number, input: JoinPublicEventInput) {
+    return prisma.attendee.create({
+      data: {
+        eventId,
+        nickname: input.nickname,
+        fingerprint: input.fingerprint,
+      },
+    })
   },
 }

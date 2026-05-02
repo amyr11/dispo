@@ -2,11 +2,16 @@ import { NextResponse } from "next/server"
 import { parseEventId } from "@/features/events/server/params"
 import { eventsService } from "@/features/events/server/service"
 import {
+  ConflictError,
   NotFoundError,
   UnauthorizedError,
   ValidationError,
 } from "@/features/events/server/errors"
-import { parsePublicEventPasswordInput } from "@/features/events/server/schema"
+import { parseJoinPublicEventInput } from "@/features/events/server/schema"
+import {
+  PUBLIC_EVENT_ACCESS_MAX_AGE,
+  publicEventAccess,
+} from "@/features/events/server/public-access"
 
 function toErrorResponse(error: unknown): NextResponse {
   if (error instanceof ValidationError) {
@@ -15,6 +20,10 @@ function toErrorResponse(error: unknown): NextResponse {
 
   if (error instanceof UnauthorizedError) {
     return NextResponse.json({ error: error.message }, { status: 401 })
+  }
+
+  if (error instanceof ConflictError) {
+    return NextResponse.json({ error: error.message }, { status: 409 })
   }
 
   if (error instanceof NotFoundError) {
@@ -34,10 +43,26 @@ export async function POST(
     const payload = await req.json().catch(() => {
       throw new ValidationError("Invalid JSON body")
     })
-    const password = parsePublicEventPasswordInput(payload)
-    await eventsService.verifyPublicEventPassword(eventIdNum, password)
+    const input = parseJoinPublicEventInput(payload)
+    const { event, attendee } = await eventsService.joinPublicEvent(
+      eventIdNum,
+      input
+    )
 
-    return NextResponse.json({ success: true })
+    const response = NextResponse.json({ attendee }, { status: 201 })
+    response.cookies.set(
+      publicEventAccess.cookieName(event.id),
+      publicEventAccess.createToken(event),
+      {
+        httpOnly: true,
+        maxAge: PUBLIC_EVENT_ACCESS_MAX_AGE,
+        path: `/events/${event.id}/public`,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      }
+    )
+
+    return response
   } catch (error) {
     return toErrorResponse(error)
   }
