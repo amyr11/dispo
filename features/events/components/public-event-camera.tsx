@@ -120,7 +120,6 @@ export function PublicEventCamera({
   const isUploadingRef = useRef(false)
   const uploadTimerRef = useRef<number | null>(null)
   const captureIdRef = useRef(0)
-  const freezeUrlRef = useRef<string | null>(null)
 
   const [error, setError] = useState("")
   const [isLoadingState, setIsLoadingState] = useState(true)
@@ -128,8 +127,7 @@ export function PublicEventCamera({
   const [isCapturing, setIsCapturing] = useState(false)
   const [queuedCapturesCount, setQueuedCapturesCount] = useState(0)
   const [failedCapturesCount, setFailedCapturesCount] = useState(0)
-  const [flashActive, setFlashActive] = useState(false)
-  const [freezeFrameUrl, setFreezeFrameUrl] = useState<string | null>(null)
+  const [blackBlinkActive, setBlackBlinkActive] = useState(false)
   const [uploadErrorToast, setUploadErrorToast] = useState("")
   const [lensOptions, setLensOptions] = useState<LensOption[]>([])
   const [selectedLensDeviceId, setSelectedLensDeviceId] = useState("")
@@ -164,7 +162,6 @@ export function PublicEventCamera({
 
   useEffect(
     () => () => {
-      if (freezeUrlRef.current) URL.revokeObjectURL(freezeUrlRef.current)
       if (uploadTimerRef.current) window.clearTimeout(uploadTimerRef.current)
     },
     []
@@ -523,22 +520,8 @@ export function PublicEventCamera({
       const video = videoRef.current
       if (!captureTrack || !video) throw new Error("Unable to access camera")
 
-      setFlashActive(true)
+      setBlackBlinkActive(true)
       const rawBlob = await captureImageFastFromVideo(video, captureTrack)
-      window.setTimeout(() => setFlashActive(false), 40)
-
-      const freezeUrl = URL.createObjectURL(rawBlob)
-      if (freezeUrlRef.current) URL.revokeObjectURL(freezeUrlRef.current)
-      freezeUrlRef.current = freezeUrl
-      setFreezeFrameUrl(freezeUrl)
-      window.setTimeout(() => {
-        setFreezeFrameUrl((current) => {
-          if (current !== freezeUrl) return current
-          URL.revokeObjectURL(freezeUrl)
-          if (freezeUrlRef.current === freezeUrl) freezeUrlRef.current = null
-          return null
-        })
-      }, 140)
 
       const captureId = `${Date.now()}-${captureIdRef.current}`
       captureIdRef.current += 1
@@ -552,13 +535,14 @@ export function PublicEventCamera({
       setQueuedCapturesCount((prev) => prev + 1)
       void processQueuedCaptures()
     } catch (captureError) {
-      setFlashActive(false)
+      setBlackBlinkActive(false)
       setError(
         captureError instanceof Error
           ? captureError.message
           : "Unable to capture photo"
       )
     } finally {
+      setBlackBlinkActive(false)
       setIsCapturing(false)
     }
   }
@@ -584,17 +568,13 @@ export function PublicEventCamera({
 
           <div className="flex justify-center">
             <div className="relative h-44 w-60 overflow-hidden rounded-md border-4 border-black/20 bg-black">
-              {freezeFrameUrl && (
-                <img
-                  src={freezeFrameUrl}
-                  alt=""
-                  aria-hidden
-                  className="pointer-events-none absolute z-10 h-44 w-60 object-cover"
-                />
-              )}
-              {flashActive && (
-                <div className="pointer-events-none absolute z-20 h-44 w-60 bg-white/70" />
-              )}
+              <div
+                className={`pointer-events-none absolute z-20 h-44 w-60 bg-black ${
+                  blackBlinkActive
+                    ? "opacity-100 transition-none"
+                    : "opacity-0 transition-opacity duration-1500"
+                }`}
+              />
               <video
                 ref={videoRef}
                 playsInline
