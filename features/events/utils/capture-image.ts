@@ -3,6 +3,7 @@ const MAX_RESIZE_PASSES = 6
 const MAX_BASE_DIMENSION = 2560
 const RESIZE_SCALE_STEP = 0.82
 export const MAX_UPLOAD_PHOTO_BYTES = 1 * 1024 * 1024
+const FIXED_BLACK_FLOOR = 0.08 // 98.9% black max; never pure black
 
 type DisposableFilmProfile = {
   seed: number,
@@ -121,6 +122,10 @@ function clamp01(value: number): number {
   return value
 }
 
+function clampWithBlackFloor(value: number): number {
+  return Math.max(FIXED_BLACK_FLOOR, clamp01(value))
+}
+
 function mix(start: number, end: number, amount: number): number {
   return start + (end - start) * amount
 }
@@ -170,7 +175,7 @@ function createDisposableFilmProfile(): DisposableFilmProfile {
     tintR: randomBetween(random, 0.99, 1.0),
     tintG: randomBetween(random, 1.0, 1.25),
     tintB: randomBetween(random, 0.97, 0.995),
-    tintStrength: randomBetween(random, 0.15, 0.2),
+    tintStrength: randomBetween(random, 0.2, 0.28),
     warmth: randomBetween(random, 0.2, 0.24),
     fade: randomBetween(random, 0.01, 0.03),
     blurPx: randomBetween(random, 0.15, 1.4),
@@ -290,9 +295,9 @@ function applyDisposableFilmEffect(
       green = mix(green, profile.whitePoint * profile.whiteTintG, highlightAmount * 0.65)
       blue = mix(blue, profile.whitePoint * profile.whiteTintB, highlightAmount * 0.65)
 
-      data[index] = Math.round(clamp01(red) * 255)
-      data[index + 1] = Math.round(clamp01(green) * 255)
-      data[index + 2] = Math.round(clamp01(blue) * 255)
+      data[index] = Math.round(clampWithBlackFloor(red) * 255)
+      data[index + 1] = Math.round(clampWithBlackFloor(green) * 255)
+      data[index + 2] = Math.round(clampWithBlackFloor(blue) * 255)
     }
   }
 
