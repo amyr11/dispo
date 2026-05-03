@@ -143,10 +143,6 @@ function randomBetween(random: () => number, min: number, max: number): number {
   return mix(min, max, random())
 }
 
-function randomInt(random: () => number, min: number, max: number): number {
-  return Math.floor(randomBetween(random, min, max + 1))
-}
-
 function applySoftHighlightKnee(
   value: number,
   knee: number,
@@ -299,16 +295,12 @@ function drawEdgeLightBurns(
   // Use non-seeded side pick so consecutive photos do not feel biased to one side.
   const edge = Math.random() < 0.5 ? 2 : 3 // vertical sides only: left or right
   const isThinBurn = random() < 0.8
-  const thinVariant = isThinBurn ? randomInt(random, 0, 3) : 0
   const depthRatio = isThinBurn
     ? randomBetween(random, 0.016, 0.055)
     : randomBetween(random, 0.08, 0.17)
   const glowAlpha = isThinBurn
     ? randomBetween(random, 0.8, 1)
     : randomBetween(random, 0.5, 0.74)
-  const coreAlpha = isThinBurn
-    ? randomBetween(random, 0.86, 1)
-    : randomBetween(random, 0.56, 0.76)
   const edgeLockAlpha = isThinBurn
     ? randomBetween(random, 0.82, 1)
     : randomBetween(random, 0.56, 0.74)

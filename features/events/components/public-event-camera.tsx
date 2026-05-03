@@ -138,10 +138,6 @@ export function PublicEventCamera({
     return getStoredPublicAttendeeValue(attendeeFingerprintKey(eventId))
   })
 
-  const photosLeft = useMemo(
-    () => Math.max(0, photoLimit - photosTaken),
-    [photoLimit, photosTaken]
-  )
   const captureSlotsLeft = useMemo(
     () => Math.max(0, photoLimit - photosTaken - queuedCapturesCount),
     [photoLimit, photosTaken, queuedCapturesCount]
