@@ -4,6 +4,13 @@ export type LensOption = {
   supportsFlash: boolean
 }
 
+export type CameraVideoPreferences = {
+  width?: number
+  height?: number
+  frameRate?: number
+  aspectRatio?: number
+}
+
 const FRONT_CAMERA_LABEL_HINTS = ["front", "user", "selfie"]
 
 export function isLikelyFrontCameraLabel(label: string): boolean {
@@ -17,23 +24,75 @@ async function lensSupportsFlash(track: MediaStreamTrack): Promise<boolean> {
 }
 
 export async function openCameraStreamByDeviceId(
-  deviceId: string
+  deviceId: string,
+  preferences?: CameraVideoPreferences
 ): Promise<MediaStream> {
-  return navigator.mediaDevices.getUserMedia({
-    video: { deviceId: { exact: deviceId } },
-    audio: false,
-  })
-}
+  const baseVideoConstraints = {
+    deviceId: { exact: deviceId },
+    width: preferences?.width ? { ideal: preferences.width } : undefined,
+    height: preferences?.height ? { ideal: preferences.height } : undefined,
+    frameRate: preferences?.frameRate
+      ? { ideal: preferences.frameRate }
+      : undefined,
+  }
 
-export async function openEnvironmentStream(): Promise<MediaStream> {
+  if (!preferences?.aspectRatio) {
+    return navigator.mediaDevices.getUserMedia({
+      video: baseVideoConstraints,
+      audio: false,
+    })
+  }
+
   return navigator.mediaDevices
     .getUserMedia({
-      video: { facingMode: { exact: "environment" } },
+      video: {
+        ...baseVideoConstraints,
+        aspectRatio: { exact: preferences.aspectRatio },
+      },
       audio: false,
     })
     .catch(() =>
       navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
+        video: {
+          ...baseVideoConstraints,
+          aspectRatio: { ideal: preferences.aspectRatio },
+        },
+        audio: false,
+      })
+    )
+}
+
+export async function openEnvironmentStream(
+  preferences?: CameraVideoPreferences
+): Promise<MediaStream> {
+  return navigator.mediaDevices
+    .getUserMedia({
+      video: {
+        facingMode: { exact: "environment" },
+        width: preferences?.width ? { ideal: preferences.width } : undefined,
+        height: preferences?.height ? { ideal: preferences.height } : undefined,
+        aspectRatio: preferences?.aspectRatio
+          ? { ideal: preferences.aspectRatio }
+          : undefined,
+        frameRate: preferences?.frameRate
+          ? { ideal: preferences.frameRate }
+          : undefined,
+      },
+      audio: false,
+    })
+    .catch(() =>
+      navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: preferences?.width ? { ideal: preferences.width } : undefined,
+          height: preferences?.height ? { ideal: preferences.height } : undefined,
+          aspectRatio: preferences?.aspectRatio
+            ? { ideal: preferences.aspectRatio }
+            : undefined,
+          frameRate: preferences?.frameRate
+            ? { ideal: preferences.frameRate }
+            : undefined,
+        },
         audio: false,
       })
     )

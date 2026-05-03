@@ -12,6 +12,7 @@ import {
   compressPhotoForUpload,
 } from "@/features/events/utils/capture-image"
 import {
+  type CameraVideoPreferences,
   type LensOption,
   isLikelyFrontCameraLabel,
   listLensOptions,
@@ -56,6 +57,25 @@ type ProcessedCapture = {
   takenAt: string
   file: File
   attempts: number
+}
+
+type CameraResolutionPreset = "720p" | "1080p" | "1440p"
+
+const RESOLUTION_PRESET_OPTIONS: Record<
+  CameraResolutionPreset,
+  { width: number; height: number }
+> = {
+  "720p": { width: 1280, height: 720 },
+  "1080p": { width: 1920, height: 1080 },
+  "1440p": { width: 2560, height: 1440 },
+}
+
+const SELECTED_RESOLUTION_PRESET: CameraResolutionPreset = "1080p"
+
+const STARTUP_VIDEO_PREFERENCES: CameraVideoPreferences = {
+  ...RESOLUTION_PRESET_OPTIONS[SELECTED_RESOLUTION_PRESET],
+  aspectRatio: 4 / 3,
+  frameRate: 30,
 }
 
 function isPhoneDevice(): boolean {
@@ -282,7 +302,10 @@ export function PublicEventCamera({
           if (stream) break
 
           try {
-            const nextStream = await openCameraStreamByDeviceId(deviceId)
+            const nextStream = await openCameraStreamByDeviceId(
+              deviceId,
+              STARTUP_VIDEO_PREFERENCES
+            )
             const lensLabel = labelByDeviceId.get(deviceId)
 
             if (isPhone && isFrontFacingStream(nextStream, lensLabel)) {
@@ -298,7 +321,7 @@ export function PublicEventCamera({
 
         if (!stream) {
           try {
-            stream = await openEnvironmentStream()
+            stream = await openEnvironmentStream(STARTUP_VIDEO_PREFERENCES)
 
             if (isPhone && isFrontFacingStream(stream)) {
               stream.getTracks().forEach((track) => track.stop())

@@ -1,6 +1,7 @@
 const JPEG_QUALITY_STEPS = [0.88, 0.8, 0.72, 0.64, 0.56, 0.48, 0.4]
 const MAX_RESIZE_PASSES = 6
 const MAX_BASE_DIMENSION = 2560
+const CAPTURE_TARGET_LONGEST_SIDE = 1920
 const RESIZE_SCALE_STEP = 0.82
 export const MAX_UPLOAD_PHOTO_BYTES = 1 * 1024 * 1024
 const FIXED_BLACK_FLOOR = 0.08 // 98.9% black max; never pure black
@@ -97,6 +98,24 @@ function getInitialScale(width: number, height: number): number {
   const longestSide = Math.max(width, height)
   if (longestSide <= MAX_BASE_DIMENSION) return 1
   return MAX_BASE_DIMENSION / longestSide
+}
+
+function getCaptureDimensions(
+  sourceWidth: number,
+  sourceHeight: number
+): { width: number, height: number } {
+  const longestSide = Math.max(sourceWidth, sourceHeight)
+  const targetLongestSide = Math.min(CAPTURE_TARGET_LONGEST_SIDE, MAX_BASE_DIMENSION)
+
+  if (longestSide >= targetLongestSide) {
+    return { width: sourceWidth, height: sourceHeight }
+  }
+
+  const scale = targetLongestSide / longestSide
+  return {
+    width: Math.round(sourceWidth * scale),
+    height: Math.round(sourceHeight * scale),
+  }
 }
 
 function toJpegBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
@@ -647,96 +666,26 @@ export async function compressPhotoForUpload(
   throw new Error("Unable to compress photo")
 }
 
-export async function captureImage(
-  track: MediaStreamTrack
-): Promise<Blob> {
-  const flashTimeout = Math.round(randomBetween(Math.random, 700, 900))
-  const capabilities = getTorchCapabilities(track)
-  const hasTorch = capabilities.torch === true
-  let torchEnabled = false
-  const stream = new MediaStream([track])
-
-  const maxWidth = (capabilities.width as ConstrainULongRange)?.max
-  const maxHeight = (capabilities.height as ConstrainULongRange)?.max
-
-  if (maxWidth && maxHeight) {
-    await track.applyConstraints({ width: maxWidth, height: maxHeight })
-  }
-
-  if (hasTorch) {
-    await track.applyConstraints({ advanced: [{ torch: true } as never] })
-    torchEnabled = true
-    await sleep(flashTimeout)
-  }
-
-  try {
-
-    return await new Promise((resolve, reject) => {
-      const video = document.createElement("video")
-      video.srcObject = stream
-
-      video.onloadedmetadata = async () => {
-        try {
-          await video.play()
-          requestAnimationFrame(() => {
-            void (async () => {
-              try {
-                const canvas = new OffscreenCanvas(video.videoWidth, video.videoHeight)
-                const context = canvas.getContext("2d")
-
-                if (!context) {
-                  reject(new Error("Unable to capture photo"))
-                  return
-                }
-
-                context.drawImage(video, 0, 0)
-
-                // Turn torch off as soon as we have the captured frame.
-                if (hasTorch && torchEnabled) {
-                  await track.applyConstraints({
-                    advanced: [{ torch: false } as never],
-                  })
-                  torchEnabled = false
-                }
-
-                applyDisposableFilmEffect(context, video.videoWidth, video.videoHeight)
-                const blob = await canvas.convertToBlob({ type: "image/jpeg" })
-                resolve(blob)
-              } catch (error) {
-                reject(error)
-              }
-            })()
-          })
-        } catch (error) {
-          reject(error)
-        }
-      }
-
-      video.onerror = () => reject(new Error("Unable to capture photo"))
-    })
-  } finally {
-    if (hasTorch && torchEnabled) {
-      await track.applyConstraints({ advanced: [{ torch: false } as never] })
-      torchEnabled = false
-    }
-  }
-}
-
 export async function captureImageFastFromVideo(
   video: HTMLVideoElement,
   track: MediaStreamTrack
 ): Promise<Blob> {
-  const captureWidth = 1200
-  const captureHeight = 1600
+  const settings = track.getSettings()
+  const sourceWidth = video.videoWidth || settings.width || 0
+  const sourceHeight = video.videoHeight || settings.height || 0
 
-  if (!captureWidth || !captureHeight) {
+  if (!sourceWidth || !sourceHeight) {
     throw new Error("Camera preview is not ready")
   }
+  const { width: captureWidth, height: captureHeight } = getCaptureDimensions(
+    sourceWidth,
+    sourceHeight
+  )
 
   const capabilities = getTorchCapabilities(track)
   const hasTorch = capabilities.torch === true
-  const flashDurationMs = 600
-  const jpegQuality = 0.9
+  const flashDurationMs = Math.round(randomBetween(Math.random, 600, 800))
+  const jpegQuality = 1
 
   let torchEnabled = false
 
