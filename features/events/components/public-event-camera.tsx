@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button"
 import {
   MAX_UPLOAD_PHOTO_BYTES,
   applyDisposableFilmEffectToBlob,
+  createVideoCaptureSession,
   captureImageFastFromVideo,
   compressPhotoForUpload,
+  type VideoCaptureSession,
 } from "@/features/events/utils/capture-image"
 import {
   type CameraVideoPreferences,
@@ -70,7 +72,7 @@ const RESOLUTION_PRESET_OPTIONS: Record<
   "1440p": { width: 2560, height: 1440 },
 }
 
-const SELECTED_RESOLUTION_PRESET: CameraResolutionPreset = "1080p"
+const SELECTED_RESOLUTION_PRESET: CameraResolutionPreset = "1440p"
 
 const STARTUP_VIDEO_PREFERENCES: CameraVideoPreferences = {
   ...RESOLUTION_PRESET_OPTIONS[SELECTED_RESOLUTION_PRESET],
@@ -134,6 +136,7 @@ export function PublicEventCamera({
   const router = useRouter()
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const captureSessionRef = useRef<VideoCaptureSession | null>(null)
   const pendingCapturesRef = useRef<QueuedCapture[]>([])
   const processedCapturesRef = useRef<ProcessedCapture[]>([])
   const isProcessingRef = useRef(false)
@@ -371,6 +374,12 @@ export function PublicEventCamera({
 
         video.srcObject = stream
         await video.play()
+        if (activeTrack) {
+          captureSessionRef.current = createVideoCaptureSession(
+            video,
+            activeTrack
+          )
+        }
         setIsCameraReady(true)
       } catch (cameraError) {
         if (!active) return
@@ -389,6 +398,7 @@ export function PublicEventCamera({
       active = false
       streamRef.current?.getTracks().forEach((track) => track.stop())
       streamRef.current = null
+      captureSessionRef.current = null
     }
   }, [isLoadingState, photoLimit, selectedLensDeviceId])
 
@@ -539,8 +549,15 @@ export function PublicEventCamera({
       const video = videoRef.current
       if (!captureTrack || !video) throw new Error("Unable to access camera")
 
+      const session =
+        captureSessionRef.current &&
+        captureSessionRef.current.trackId === captureTrack.id
+          ? captureSessionRef.current
+          : createVideoCaptureSession(video, captureTrack)
+      captureSessionRef.current = session
+
       setBlackBlinkActive(true)
-      const rawBlob = await captureImageFastFromVideo(video, captureTrack)
+      const rawBlob = await captureImageFastFromVideo(session)
 
       const captureId = `${Date.now()}-${captureIdRef.current}`
       captureIdRef.current += 1
@@ -561,8 +578,10 @@ export function PublicEventCamera({
           : "Unable to capture photo"
       )
     } finally {
-      setBlackBlinkActive(false)
       setIsCapturing(false)
+      setTimeout(() => {
+        setBlackBlinkActive(false)
+      }, 200)
     }
   }
 
@@ -589,9 +608,7 @@ export function PublicEventCamera({
             <div className="relative h-44 w-60 overflow-hidden rounded-md border-4 border-black/20 bg-black">
               <div
                 className={`pointer-events-none absolute z-20 h-44 w-60 bg-black ${
-                  blackBlinkActive
-                    ? "opacity-100 transition-none"
-                    : "opacity-0 transition-opacity duration-1500"
+                  blackBlinkActive ? "opacity-100" : "opacity-0"
                 }`}
               />
               <video

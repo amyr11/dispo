@@ -5,6 +5,64 @@ const CAPTURE_TARGET_LONGEST_SIDE = 1920
 const RESIZE_SCALE_STEP = 0.82
 export const MAX_UPLOAD_PHOTO_BYTES = 1 * 1024 * 1024
 const FIXED_BLACK_FLOOR = 0.08 // 98.9% black max; never pure black
+const MAX_TRACK_TORCH_CACHE_SIZE = 8
+
+type ReusableCaptureSurface = {
+  canvas: OffscreenCanvas | HTMLCanvasElement
+  context: Capture2DContext
+  width: number
+  height: number
+}
+
+type Capture2DContext = OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D
+
+export type VideoCaptureSession = {
+  video: HTMLVideoElement
+  track: MediaStreamTrack
+  trackId: string
+  captureWidth: number
+  captureHeight: number
+  hasTorch: boolean
+}
+
+function createCanvas(width: number, height: number): OffscreenCanvas | HTMLCanvasElement {
+  if (typeof OffscreenCanvas !== "undefined") {
+    return new OffscreenCanvas(width, height)
+  }
+
+  if (typeof document !== "undefined") {
+    const canvas = document.createElement("canvas")
+    canvas.width = width
+    canvas.height = height
+    return canvas
+  }
+
+  throw new Error("Canvas is not available in this environment")
+}
+
+function get2DContext(canvas: OffscreenCanvas | HTMLCanvasElement): Capture2DContext {
+  const context = canvas.getContext("2d")
+  if (!context || !("drawImage" in context)) {
+    throw new Error("Unable to initialize capture context")
+  }
+  return context as Capture2DContext
+}
+
+function createReusableCaptureSurface(): ReusableCaptureSurface {
+  const canvas = createCanvas(1, 1)
+  const context = get2DContext(canvas)
+
+  return {
+    canvas,
+    context,
+    width: 1,
+    height: 1,
+  }
+}
+
+let reusableCaptureSurface: ReusableCaptureSurface | null = null
+
+const torchSupportByTrackId = new Map<string, boolean>()
 
 type DisposableFilmProfile = {
   seed: number,
@@ -77,7 +135,7 @@ async function waitForVideoFrames(
 
 async function drawSettledTorchFrame(
   video: HTMLVideoElement,
-  context: OffscreenCanvasRenderingContext2D,
+  context: Capture2DContext,
   width: number,
   height: number
 ): Promise<void> {
@@ -92,6 +150,53 @@ function getTorchCapabilities(track: MediaStreamTrack) {
   return track.getCapabilities() as MediaTrackCapabilities & {
     torch?: boolean
   }
+}
+
+function getOrProbeTorchSupport(track: MediaStreamTrack): boolean {
+  const trackId = track.id
+  const cached = torchSupportByTrackId.get(trackId)
+  if (cached !== undefined) return cached
+
+  const hasTorch = getTorchCapabilities(track).torch === true
+  torchSupportByTrackId.set(trackId, hasTorch)
+
+  if (torchSupportByTrackId.size > MAX_TRACK_TORCH_CACHE_SIZE) {
+    const oldestKey = torchSupportByTrackId.keys().next().value
+    if (oldestKey) {
+      torchSupportByTrackId.delete(oldestKey)
+    }
+  }
+
+  return hasTorch
+}
+
+function getReusableCaptureSurface(
+  width: number,
+  height: number
+): ReusableCaptureSurface {
+  if (!reusableCaptureSurface) {
+    reusableCaptureSurface = createReusableCaptureSurface()
+  }
+
+  if (reusableCaptureSurface.width !== width || reusableCaptureSurface.height !== height) {
+    reusableCaptureSurface.canvas.width = width
+    reusableCaptureSurface.canvas.height = height
+    reusableCaptureSurface.width = width
+    reusableCaptureSurface.height = height
+  }
+
+  return reusableCaptureSurface
+}
+
+async function convertCanvasToJpegBlob(
+  canvas: OffscreenCanvas | HTMLCanvasElement,
+  quality: number
+): Promise<Blob> {
+  if ("convertToBlob" in canvas) {
+    return await canvas.convertToBlob({ type: "image/jpeg", quality })
+  }
+
+  return await toJpegBlob(canvas, quality)
 }
 
 function getInitialScale(width: number, height: number): number {
@@ -213,7 +318,7 @@ function createDisposableFilmProfile(): DisposableFilmProfile {
 }
 
 function drawEdgeContactBurn(
-  context: OffscreenCanvasRenderingContext2D,
+  context: Capture2DContext,
   width: number,
   height: number,
   edge: number,
@@ -302,7 +407,7 @@ function drawEdgeContactBurn(
 }
 
 function drawEdgeLightBurns(
-  context: OffscreenCanvasRenderingContext2D,
+  context: Capture2DContext,
   width: number,
   height: number,
   seed: number
@@ -507,7 +612,7 @@ function drawEdgeLightBurns(
 }
 
 function applyDisposableFilmEffect(
-  context: OffscreenCanvasRenderingContext2D,
+  context: Capture2DContext,
   width: number,
   height: number
 ): void {
@@ -515,18 +620,15 @@ function applyDisposableFilmEffect(
   const sourceCanvas = context.canvas
 
   if (profile.blurPx > 0) {
-    const blurCanvas = new OffscreenCanvas(width, height)
-    const blurContext = blurCanvas.getContext("2d")
+    const blurCanvas = createCanvas(width, height)
+    const blurContext = get2DContext(blurCanvas)
+    blurContext.filter = `blur(${profile.blurPx.toFixed(2)}px)`
+    blurContext.drawImage(sourceCanvas, 0, 0, width, height)
 
-    if (blurContext) {
-      blurContext.filter = `blur(${profile.blurPx.toFixed(2)}px)`
-      blurContext.drawImage(sourceCanvas, 0, 0, width, height)
-
-      context.save()
-      context.globalAlpha = profile.blurMix
-      context.drawImage(blurCanvas, 0, 0, width, height)
-      context.restore()
-    }
+    context.save()
+    context.globalAlpha = profile.blurMix
+    context.drawImage(blurCanvas, 0, 0, width, height)
+    context.restore()
   }
 
   // Apply burns before pixel-level tone mapping so they obey highlight clipping.
@@ -667,35 +769,25 @@ export async function compressPhotoForUpload(
 }
 
 export async function captureImageFastFromVideo(
-  video: HTMLVideoElement,
-  track: MediaStreamTrack
+  session: VideoCaptureSession
 ): Promise<Blob> {
-  const settings = track.getSettings()
-  const sourceWidth = video.videoWidth || settings.width || 0
-  const sourceHeight = video.videoHeight || settings.height || 0
-
-  if (!sourceWidth || !sourceHeight) {
-    throw new Error("Camera preview is not ready")
+  const { video, track, trackId, captureWidth, captureHeight, hasTorch } =
+    session
+  if (track.id !== trackId) {
+    throw new Error("Camera track changed. Please try again.")
   }
-  const { width: captureWidth, height: captureHeight } = getCaptureDimensions(
-    sourceWidth,
-    sourceHeight
-  )
 
-  const capabilities = getTorchCapabilities(track)
-  const hasTorch = capabilities.torch === true
   const flashDurationMs = Math.round(randomBetween(Math.random, 600, 800))
   const jpegQuality = 1
 
   let torchEnabled = false
 
   try {
-    const canvas = new OffscreenCanvas(captureWidth, captureHeight)
-    const context = canvas.getContext("2d")
-
-    if (!context) {
-      throw new Error("Unable to capture photo")
-    }
+    const { canvas, context } = getReusableCaptureSurface(
+      captureWidth,
+      captureHeight
+    )
+    context.clearRect(0, 0, captureWidth, captureHeight)
 
     if (hasTorch) {
       await track.applyConstraints({ advanced: [{ torch: true } as never] })
@@ -717,7 +809,7 @@ export async function captureImageFastFromVideo(
       torchEnabled = false
     }
 
-    return await canvas.convertToBlob({ type: "image/jpeg", quality: jpegQuality })
+    return await convertCanvasToJpegBlob(canvas, jpegQuality)
   } finally {
     if (hasTorch && torchEnabled) {
       await track.applyConstraints({ advanced: [{ torch: false } as never] })
@@ -725,20 +817,42 @@ export async function captureImageFastFromVideo(
   }
 }
 
+export function createVideoCaptureSession(
+  video: HTMLVideoElement,
+  track: MediaStreamTrack
+): VideoCaptureSession {
+  const settings = track.getSettings()
+  const sourceWidth = video.videoWidth || settings.width || 0
+  const sourceHeight = video.videoHeight || settings.height || 0
+
+  if (!sourceWidth || !sourceHeight) {
+    throw new Error("Camera preview is not ready")
+  }
+
+  const { width: captureWidth, height: captureHeight } = getCaptureDimensions(
+    sourceWidth,
+    sourceHeight
+  )
+
+  return {
+    video,
+    track,
+    trackId: track.id,
+    captureWidth,
+    captureHeight,
+    hasTorch: getOrProbeTorchSupport(track),
+  }
+}
+
 export async function applyDisposableFilmEffectToBlob(blob: Blob): Promise<Blob> {
   const bitmap = await createImageBitmap(blob)
-  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height)
-  const context = canvas.getContext("2d")
-
-  if (!context) {
-    bitmap.close()
-    throw new Error("Unable to process photo")
-  }
+  const canvas = createCanvas(bitmap.width, bitmap.height)
+  const context = get2DContext(canvas)
 
   try {
     context.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height)
     applyDisposableFilmEffect(context, bitmap.width, bitmap.height)
-    return await canvas.convertToBlob({ type: "image/jpeg", quality: 0.86 })
+    return await convertCanvasToJpegBlob(canvas, 0.86)
   } finally {
     bitmap.close()
   }
