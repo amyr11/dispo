@@ -4,7 +4,7 @@ const MAX_BASE_DIMENSION = 2560
 const CAPTURE_TARGET_LONGEST_SIDE = 1920
 const RESIZE_SCALE_STEP = 0.82
 export const MAX_UPLOAD_PHOTO_BYTES = 1 * 1024 * 1024
-const FIXED_BLACK_FLOOR = 0.08 // 98.9% black max; never pure black
+const FIXED_BLACK_FLOOR = 0.15
 const MAX_TRACK_TORCH_CACHE_SIZE = 8
 
 type ReusableCaptureSurface = {
