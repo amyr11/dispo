@@ -41,7 +41,7 @@ export function CountdownPanel({
   onComplete,
   className,
 }: CountdownPanelProps) {
-  const [now, setNow] = useState(initialNow ?? Date.now())
+  const [now, setNow] = useState(() => initialNow ?? Date.now())
   const countdownParts = useMemo(
     () => getCountdownParts(targetAt - now),
     [targetAt, now]

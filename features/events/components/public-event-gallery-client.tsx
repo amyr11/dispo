@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
@@ -108,15 +109,18 @@ export function PublicEventGalleryClient({
 
   return (
     <section className="flex flex-col gap-6 py-8">
-      <div className="relative overflow-hidden rounded-lg border bg-card">
+      <div className="relative min-h-[300px] overflow-hidden rounded-lg border bg-card sm:min-h-[420px]">
         {selected && !isSelectedPhotoLoaded ? (
           <Skeleton className="absolute inset-0 h-[300px] w-full sm:h-[420px]" />
         ) : null}
         {selected && (
-          <img
+          <Image
             src={selected.url}
             alt={`Event photo ${selectedIndex + 1}`}
-            className="h-[300px] w-full object-contain bg-black/5 sm:h-[420px]"
+            fill
+            sizes="100vw"
+            className="object-contain bg-black/5"
+            unoptimized
             onLoad={() => {
               setLoadedPhotoIds((prev) => ({ ...prev, [selected.id]: true }))
             }}
@@ -155,11 +159,14 @@ export function PublicEventGalleryClient({
             onClick={() => setSelectedIndex(index)}
             aria-label={`Select photo ${index + 1}`}
           >
-            <img
+            <Image
               src={photo.url}
               alt={`Thumbnail ${index + 1}`}
+              width={80}
+              height={80}
+              sizes="80px"
               className="h-16 w-16 object-cover sm:h-20 sm:w-20"
-              loading="lazy"
+              unoptimized
             />
           </button>
         ))}

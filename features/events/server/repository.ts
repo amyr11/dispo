@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { Prisma } from "@prisma/client"
 import {
   CreateEventInput,
   EventPhotoRecord,
@@ -242,7 +243,14 @@ export const eventsRepository = {
     | { status: "limit-reached"; shotsTaken: number; photoLimit: number }
     | { status: "not-found" }
   > {
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(
+      async (
+        tx: Prisma.TransactionClient
+      ): Promise<
+        | { status: "captured"; shotsTaken: number; photoLimit: number }
+        | { status: "limit-reached"; shotsTaken: number; photoLimit: number }
+        | { status: "not-found" }
+      > => {
       const rows = await tx.$queryRaw<
         Array<{ attendeeId: bigint; photoLimit: number }>
       >`
@@ -290,6 +298,7 @@ export const eventsRepository = {
         shotsTaken: shotsTaken + 1,
         photoLimit: attendee.photoLimit,
       }
-    })
+      }
+    )
   },
 }
