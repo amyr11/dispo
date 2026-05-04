@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server"
 
 // Define routes that do not require an Owner account
 const PUBLIC_ROUTES = ["/", "/auth"]
+const PROFILE_SETUP_ROUTE = "/profile/setup"
 
 function isPublicEventRoute(pathname: string): boolean {
   return /^\/events\/\d+\/public\/?$/.test(pathname)
@@ -30,6 +31,10 @@ function isPublicEventGalleryApiRoute(pathname: string): boolean {
 
 function isPublicEventApiRoute(pathname: string): boolean {
   return /^\/api\/events\/\d+\/public\/(verify|join)\/?$/.test(pathname)
+}
+
+function isProfileSetupRoute(pathname: string): boolean {
+  return pathname === PROFILE_SETUP_ROUTE || pathname.startsWith(`${PROFILE_SETUP_ROUTE}/`)
 }
 
 export async function updateSession(request: NextRequest) {
@@ -90,6 +95,36 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = "/auth/login"
     return NextResponse.redirect(url)
+  }
+
+  if (user) {
+    const { data: profile, error: profileError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("id", user.sub)
+      .maybeSingle<{ id: string }>()
+
+    if (profileError) {
+      console.error("Profile gate lookup error:", profileError)
+      const url = request.nextUrl.clone()
+      url.pathname = "/auth/login"
+      return NextResponse.redirect(url)
+    }
+
+    const profileSetupRoute = isProfileSetupRoute(pathname)
+    const isExemptWhileIncomplete = profileSetupRoute
+
+    if (!profile && !isExemptWhileIncomplete) {
+      const url = request.nextUrl.clone()
+      url.pathname = PROFILE_SETUP_ROUTE
+      return NextResponse.redirect(url)
+    }
+
+    if (profile && profileSetupRoute) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/dashboard"
+      return NextResponse.redirect(url)
+    }
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.

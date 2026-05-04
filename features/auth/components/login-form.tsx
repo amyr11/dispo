@@ -37,7 +37,7 @@ export function LoginForm({
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
-        router.push("/dashboard")
+        router.push("/profile/setup")
       }
     })
 
@@ -60,7 +60,7 @@ export function LoginForm({
         return
       }
 
-      router.push("/dashboard")
+      router.push("/profile/setup")
     } catch (err) {
       setError("An unexpected error occurred")
       console.error(err)
@@ -77,8 +77,8 @@ export function LoginForm({
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          // This ensures the user is sent back to /dashboard specifically
-          redirectTo: `${window.location.origin}/dashboard`,
+          // The middleware will send completed users to /dashboard.
+          redirectTo: `${window.location.origin}/profile/setup`,
         },
       })
 
