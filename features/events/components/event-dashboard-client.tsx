@@ -16,7 +16,6 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import Link from "next/link"
 import { EditEventDialog } from "@/features/events/components/edit-event-dialog"
 import { DeleteEventDialog } from "@/features/events/components/delete-event-dialog"
-import { isPast } from "date-fns"
 import { ShareEventDialog } from "@/features/events/components/share-event-dialog"
 import { getEventStatus } from "@/features/events/utils/event-status"
 
@@ -40,6 +39,7 @@ export function EventDashboardClient({ eventId }: { eventId: number }) {
   }
 
   const eventStatus = getEventStatus(event.eventStart)
+  const isRevealLocked = new Date() < new Date(event.revealAt)
 
   return (
     <div className="my-20 flex w-full max-w-lg flex-col px-4 sm:max-w-2xl">
@@ -77,8 +77,8 @@ export function EventDashboardClient({ eventId }: { eventId: number }) {
             />
           </Link>
         </Clickable>
-        <Clickable disabled={!isPast(event.revealAt)}>
-          <Link href="#">
+        <Clickable disabled={isRevealLocked}>
+          <Link href={`/events/${event.id}/gallery`}>
             <StatsCard
               icon={Camera01Icon}
               label="Shots taken"

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 const PUBLIC_PHOTOS_BUCKET = "photos-bucket"
+const SIGNED_URL_TTL_SECONDS = 60 * 60
 
 export const eventsStorageProvider = {
   async deleteEventFolder(userId: string, eventId: number) {
@@ -60,5 +61,42 @@ export const eventsStorageProvider = {
     const adminClient = createAdminClient()
     const supabase = adminClient ?? (await createClient())
     await supabase.storage.from(PUBLIC_PHOTOS_BUCKET).remove([path])
+  },
+
+  async createPublicPhotoAccessUrl(path: string) {
+    const adminClient = createAdminClient()
+
+    if (adminClient) {
+      const { data, error } = await adminClient.storage
+        .from(PUBLIC_PHOTOS_BUCKET)
+        .createSignedUrl(path, SIGNED_URL_TTL_SECONDS)
+
+      if (error || !data?.signedUrl) {
+        throw new Error(error?.message || "Unable to generate photo URL")
+      }
+
+      return data.signedUrl
+    }
+
+    const supabase = await createClient()
+    const { data } = supabase.storage.from(PUBLIC_PHOTOS_BUCKET).getPublicUrl(path)
+    if (!data.publicUrl) {
+      throw new Error("Unable to generate photo URL")
+    }
+    return data.publicUrl
+  },
+
+  async downloadPublicPhoto(path: string) {
+    const adminClient = createAdminClient()
+    const supabase = adminClient ?? (await createClient())
+    const { data, error } = await supabase.storage
+      .from(PUBLIC_PHOTOS_BUCKET)
+      .download(path)
+
+    if (error || !data) {
+      throw new Error(error?.message || "Unable to download photo")
+    }
+
+    return Buffer.from(await data.arrayBuffer())
   },
 }

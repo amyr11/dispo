@@ -134,6 +134,25 @@ export const eventsService = {
     return { attendeesCount, shotsCount }
   },
 
+  async getPublicEventGallery(eventId: number) {
+    const event = await this.getPublicEventById(eventId)
+    const photos = await eventsRepository.findPublicPhotosByEventId(eventId)
+
+    const photoItems = await Promise.all(
+      photos.map(async (photo) => ({
+        id: photo.id.toString(),
+        takenAt: photo.takenAt,
+        storagePath: photo.storagePath,
+        url: await eventsStorageProvider.createPublicPhotoAccessUrl(photo.storagePath),
+      }))
+    )
+
+    return {
+      event,
+      photos: photoItems,
+    }
+  },
+
   async verifyPublicEventPassword(eventId: number, password: string) {
     const event = await this.getPublicEventById(eventId)
     const eventStatus = getEventStatus(event.eventStart)

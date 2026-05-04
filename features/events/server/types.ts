@@ -43,3 +43,9 @@ export type PublicAttendeeCaptureState = {
   photoLimit: number
   revealAt: Date
 }
+
+export type EventPhotoRecord = {
+  id: bigint
+  takenAt: Date
+  storagePath: string
+}

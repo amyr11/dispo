@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import {
   CreateEventInput,
+  EventPhotoRecord,
   JoinPublicEventInput,
   PublicAttendeeCaptureState,
   UpdateEventInput,
@@ -88,6 +89,19 @@ export const eventsRepository = {
         AND deleted = false
     `
     return rows[0]?.count ?? 0
+  },
+
+  async findPublicPhotosByEventId(eventId: number): Promise<EventPhotoRecord[]> {
+    return prisma.$queryRaw<EventPhotoRecord[]>`
+      SELECT
+        p.id,
+        p."takenAt" AS "takenAt",
+        p."storagePath" AS "storagePath"
+      FROM photos p
+      WHERE p."eventId" = ${eventId}
+        AND p.deleted = false
+      ORDER BY p."takenAt" ASC
+    `
   },
 
   findAttendeeByEventIdAndFingerprint(eventId: number, fingerprint: string) {
