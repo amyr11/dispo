@@ -5,11 +5,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "pnpm prisma:generate && next build",
     "start": "next start",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prisma:generate": "prisma generate",
+    "postinstall": "pnpm prisma:generate"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.1.1",

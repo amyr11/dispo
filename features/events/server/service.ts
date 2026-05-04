@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client"
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library"
 import { eventsRepository } from "@/features/events/server/repository"
 import { eventsStorageProvider } from "@/features/events/server/storage-provider"
 import {
@@ -22,18 +22,13 @@ function computeRevealAt(eventStartIso: string): Date {
   return revealAt
 }
 
-function getUniqueErrorFields(error: Prisma.PrismaClientKnownRequestError) {
+function getUniqueErrorFields(error: PrismaClientKnownRequestError) {
   const target = error.meta?.target
   return Array.isArray(target) ? target.map(String) : []
 }
 
-function isUniqueConstraintError(
-  error: unknown
-): error is Prisma.PrismaClientKnownRequestError {
-  return (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === "P2002"
-  )
+function isUniqueConstraintError(error: unknown): error is PrismaClientKnownRequestError {
+  return error instanceof PrismaClientKnownRequestError && error.code === "P2002"
 }
 
 export const eventsService = {
