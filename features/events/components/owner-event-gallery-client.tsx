@@ -12,6 +12,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 
 type OwnerGalleryPhoto = {
   id: string
@@ -50,8 +51,10 @@ export function OwnerEventGalleryClient({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied">("idle")
+  const [loadedPhotoIds, setLoadedPhotoIds] = useState<Record<string, boolean>>({})
 
   const selected = useMemo(() => photos[selectedIndex] ?? null, [photos, selectedIndex])
+  const isSelectedPhotoLoaded = selected ? loadedPhotoIds[selected.id] === true : false
 
   function handlePrev() {
     setSelectedIndex((prev) => (prev === 0 ? photos.length - 1 : prev - 1))
@@ -151,11 +154,17 @@ export function OwnerEventGalleryClient({
   return (
     <section className="flex flex-col gap-6 py-8">
       <div className="relative overflow-hidden rounded-lg border bg-card">
+        {selected && !isSelectedPhotoLoaded ? (
+          <Skeleton className="absolute inset-0 h-[300px] w-full sm:h-[420px]" />
+        ) : null}
         {selected ? (
           <img
             src={selected.url}
             alt={`Event photo ${selectedIndex + 1}`}
             className="h-[300px] w-full object-contain bg-black/5 sm:h-[420px]"
+            onLoad={() => {
+              setLoadedPhotoIds((prev) => ({ ...prev, [selected.id]: true }))
+            }}
           />
         ) : null}
         <Button
@@ -195,6 +204,7 @@ export function OwnerEventGalleryClient({
               src={photo.url}
               alt={`Thumbnail ${index + 1}`}
               className="h-16 w-16 object-cover sm:h-20 sm:w-20"
+              loading="lazy"
             />
           </button>
         ))}

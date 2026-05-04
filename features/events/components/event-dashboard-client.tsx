@@ -1,6 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import Clickable from "@/components/ui/clickable"
 import EventBadge from "@/features/events/components/event-badge"
@@ -19,8 +20,34 @@ import { EditEventDialog } from "@/features/events/components/edit-event-dialog"
 import { DeleteEventDialog } from "@/features/events/components/delete-event-dialog"
 import { ShareEventDialog } from "@/features/events/components/share-event-dialog"
 import { getEventStatus } from "@/features/events/utils/event-status"
+import { Skeleton } from "@/components/ui/skeleton"
+
+function EventDashboardContentSkeleton() {
+  return (
+    <div className="my-20 flex w-full max-w-lg flex-col px-4 sm:max-w-2xl">
+      <div className="flex items-center justify-between">
+        <Skeleton className="size-7" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="size-7" />
+          <Skeleton className="size-7" />
+          <Skeleton className="size-7" />
+        </div>
+      </div>
+      <div className="flex flex-col gap-2 border-b py-8">
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="h-8 w-72 max-w-full" />
+        <Skeleton className="h-4 w-40" />
+      </div>
+      <div className="flex flex-col gap-2 py-8 sm:flex-row">
+        <Skeleton className="h-28 w-full" />
+        <Skeleton className="h-28 w-full" />
+      </div>
+    </div>
+  )
+}
 
 export function EventDashboardClient({ eventId }: { eventId: number }) {
+  const router = useRouter()
   const { data: event, isLoading: isEventLoading } = useQuery({
     queryKey: eventQueryKeys.detail(eventId),
     queryFn: () => getEvent(eventId),
@@ -34,11 +61,7 @@ export function EventDashboardClient({ eventId }: { eventId: number }) {
   })
 
   if (isEventLoading || !event || isStatsLoading || !stats) {
-    return (
-      <div className="my-20 flex w-full max-w-lg flex-col px-4 sm:max-w-2xl">
-        <p className="text-sm text-muted-foreground">Loading event...</p>
-      </div>
-    )
+    return <EventDashboardContentSkeleton />
   }
 
   const eventStatus = getEventStatus(event.eventStart)
@@ -79,7 +102,15 @@ export function EventDashboardClient({ eventId }: { eventId: number }) {
           </Link>
         </Clickable>
         <Clickable>
-          <Link href={`/dashboard/${event.id}/gallery`}>
+          <Link
+            href={`/dashboard/${event.id}/gallery`}
+            onMouseEnter={() => {
+              router.prefetch(`/dashboard/${event.id}/gallery`)
+            }}
+            onTouchStart={() => {
+              router.prefetch(`/dashboard/${event.id}/gallery`)
+            }}
+          >
             <StatsCard
               icon={Camera01Icon}
               label="Shots taken"

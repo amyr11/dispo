@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { createClient } from "@/lib/supabase/client"
 import Link from "next/link"
 import { type User } from "@supabase/supabase-js"
@@ -29,7 +30,9 @@ export default function Page() {
           <h1 className="text-2xl font-medium">Candid</h1>
           <p>Let&apos;s create some memories!</p>
 
-          {!loading && (
+          {loading ? (
+            <Skeleton className="mt-4 h-7 w-36" />
+          ) : (
             <Link href={user ? "/dashboard" : "/auth/login"}>
               <Button className="mt-4">
                 {user ? "Go to dashboard" : "Login"}

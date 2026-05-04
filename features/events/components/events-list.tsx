@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { formatDate } from "@/lib/utils/date-utils"
 import Link from "next/link"
 import EventBadge from "./event-badge"
@@ -20,11 +21,27 @@ import {
 
 export function EventsList() {
   const queryClient = useQueryClient()
-  const { data: eventsList = [] } = useQuery({
+  const { data: eventsList = [], isLoading } = useQuery({
     queryKey: eventQueryKeys.list(),
     queryFn: getEvents,
     staleTime: 2 * 60_000,
   })
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Card key={`events-list-skeleton-${index}`}>
+            <CardHeader>
+              <Skeleton className="h-5 w-24" />
+              <Skeleton className="mt-2 h-6 w-56 max-w-full" />
+              <Skeleton className="h-4 w-40" />
+            </CardHeader>
+          </Card>
+        ))}
+      </div>
+    )
+  }
 
   const now = new Date()
 

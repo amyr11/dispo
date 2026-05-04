@@ -10,6 +10,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 
 type GalleryPhoto = {
   id: string
@@ -46,8 +47,10 @@ export function PublicEventGalleryClient({
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied">("idle")
   const [isDownloading, setIsDownloading] = useState(false)
+  const [loadedPhotoIds, setLoadedPhotoIds] = useState<Record<string, boolean>>({})
 
   const selected = photos[selectedIndex] ?? null
+  const isSelectedPhotoLoaded = selected ? loadedPhotoIds[selected.id] === true : false
 
   async function handleCopyLink() {
     const galleryUrl = `${window.location.origin}/events/${eventId}/gallery`
@@ -106,11 +109,17 @@ export function PublicEventGalleryClient({
   return (
     <section className="flex flex-col gap-6 py-8">
       <div className="relative overflow-hidden rounded-lg border bg-card">
+        {selected && !isSelectedPhotoLoaded ? (
+          <Skeleton className="absolute inset-0 h-[300px] w-full sm:h-[420px]" />
+        ) : null}
         {selected && (
           <img
             src={selected.url}
             alt={`Event photo ${selectedIndex + 1}`}
             className="h-[300px] w-full object-contain bg-black/5 sm:h-[420px]"
+            onLoad={() => {
+              setLoadedPhotoIds((prev) => ({ ...prev, [selected.id]: true }))
+            }}
           />
         )}
         <Button
@@ -150,6 +159,7 @@ export function PublicEventGalleryClient({
               src={photo.url}
               alt={`Thumbnail ${index + 1}`}
               className="h-16 w-16 object-cover sm:h-20 sm:w-20"
+              loading="lazy"
             />
           </button>
         ))}

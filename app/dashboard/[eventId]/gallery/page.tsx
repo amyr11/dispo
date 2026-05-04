@@ -60,14 +60,14 @@ export default async function OwnerEventGalleryPage({
 
   const userId = await getCurrentUserId().catch(() => notFound())
 
-  const { event, photos } = await eventsService
-    .getOwnerEventGallery(userId, eventIdNum)
-    .catch((error) => {
+  const [ownerGallery, stats] = await Promise.all([
+    eventsService.getOwnerEventGallery(userId, eventIdNum).catch((error) => {
       if (error instanceof NotFoundError) notFound()
       throw error
-    })
-
-  const stats = await eventsService.getEventStats(userId, eventIdNum)
+    }),
+    eventsService.getEventStats(userId, eventIdNum),
+  ])
+  const { event, photos } = ownerGallery
   const now = new Date()
 
   if (now < event.revealAt) {
