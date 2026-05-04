@@ -13,6 +13,7 @@ model Event {
   createdAt     DateTime   @default(now()) @map("createdAt")
   eventName     String     @map("eventName")
   eventStart    DateTime   @map("eventStart")
+  eventEnd      DateTime   @map("eventEnd")
   revealAt      DateTime   @map("revealAt")
   attendeeLimit Int        @map("attendeeLimit")
   photoLimit    Int        @map("photoLimit")

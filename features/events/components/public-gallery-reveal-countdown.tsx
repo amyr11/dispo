@@ -9,6 +9,7 @@ import { formatDate } from "@/lib/utils/date-utils"
 type PublicGalleryRevealCountdownProps = {
   eventName: string
   eventStart: string
+  eventEnd: string
   revealAt: string
   initialNow: number
 }
@@ -16,6 +17,7 @@ type PublicGalleryRevealCountdownProps = {
 export function PublicGalleryRevealCountdown({
   eventName,
   eventStart,
+  eventEnd,
   revealAt,
   initialNow,
 }: PublicGalleryRevealCountdownProps) {
@@ -27,7 +29,11 @@ export function PublicGalleryRevealCountdown({
 
   return (
     <div className="flex w-full flex-col gap-8">
-      <EventPageHeader eventStart={eventStart} eventName={eventName} />
+      <EventPageHeader
+        eventStart={eventStart}
+        eventEnd={eventEnd}
+        eventName={eventName}
+      />
 
       <CountdownPanel
         targetAt={revealAtMs}

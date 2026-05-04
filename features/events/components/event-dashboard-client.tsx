@@ -61,7 +61,9 @@ export function EventDashboardClient({ eventId }: { eventId: number }) {
     staleTime: 30_000,
   })
 
-  const eventStatus = event ? getEventStatus(event.eventStart) : null
+  const eventStatus = event
+    ? getEventStatus(event.eventStart, event.eventEnd)
+    : null
   const isUpcoming = eventStatus === "Upcoming"
 
   if (isEventLoading || !event || isStatsLoading || !stats) {
@@ -89,7 +91,11 @@ export function EventDashboardClient({ eventId }: { eventId: number }) {
         </div>
       </div>
       <div className="pt-8">
-        <EventPageHeader eventStart={event.eventStart} eventName={event.eventName} />
+        <EventPageHeader
+          eventStart={event.eventStart}
+          eventEnd={event.eventEnd}
+          eventName={event.eventName}
+        />
       </div>
       {!isUpcoming && (
         <div className="flex flex-col gap-2 py-8 sm:flex-row">

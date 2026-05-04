@@ -35,6 +35,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 const EMPTY_FORM: CreateEventInput = {
   eventName: "",
   eventStart: "",
+  eventEnd: "",
   attendeeLimit: DEFAULT_MAX_ATTENDEES,
   photoLimit: DEFAULT_MAX_PHOTO_LIMIT,
   password: "",
@@ -46,6 +47,7 @@ function isDirty(form: CreateEventInput) {
   return (
     form.eventName !== "" ||
     form.eventStart !== "" ||
+    form.eventEnd !== "" ||
     form.attendeeLimit !== DEFAULT_MAX_ATTENDEES ||
     form.photoLimit !== DEFAULT_MAX_PHOTO_LIMIT ||
     form.password !== ""
@@ -56,8 +58,16 @@ function validate(form: CreateEventInput): FormErrors {
   const errors: FormErrors = {}
 
   if (!form.eventName.trim()) errors.eventName = "Event name is required."
-  if (!form.eventStart) errors.eventStart = "Event date is required."
+  if (!form.eventStart) errors.eventStart = "Event start date/time is required."
+  if (!form.eventEnd) errors.eventEnd = "Event end date/time is required."
   if (!form.password) errors.password = "Password is required."
+  if (form.eventStart && form.eventEnd) {
+    const start = new Date(form.eventStart)
+    const end = new Date(form.eventEnd)
+    if (end <= start) {
+      errors.eventEnd = "Event end must be after event start."
+    }
+  }
 
   if (!form.attendeeLimit || form.attendeeLimit <= 0) {
     errors.attendeeLimit = "Must be at least 1."
@@ -161,15 +171,28 @@ export function CreateEventDialog() {
             </div>
 
             <div className="flex flex-col gap-1">
-              <Label>Event Date</Label>
+              <Label>Event Start</Label>
               <Input
                 name="eventStart"
-                type="date"
+                type="datetime-local"
                 value={form.eventStart}
                 onChange={handleChange}
               />
               {errors.eventStart && (
                 <p className="text-sm text-destructive">{errors.eventStart}</p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <Label>Event End</Label>
+              <Input
+                name="eventEnd"
+                type="datetime-local"
+                value={form.eventEnd}
+                onChange={handleChange}
+              />
+              {errors.eventEnd && (
+                <p className="text-sm text-destructive">{errors.eventEnd}</p>
               )}
             </div>
 

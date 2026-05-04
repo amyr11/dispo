@@ -14,10 +14,7 @@ import { formatDate } from "@/lib/utils/date-utils"
 import Link from "next/link"
 import EventBadge from "./event-badge"
 import Clickable from "@/components/ui/clickable"
-import {
-  getEventStartDay,
-  getEventStatus,
-} from "@/features/events/utils/event-status"
+import { getEventStatus } from "@/features/events/utils/event-status"
 
 export function EventsList() {
   const queryClient = useQueryClient()
@@ -49,21 +46,21 @@ export function EventsList() {
     const aStart = new Date(a.eventStart)
     const bStart = new Date(b.eventStart)
 
-    const getStatus = (start: Date) => {
-      const status = getEventStatus(start, now)
+    const getStatus = (start: Date, end: Date) => {
+      const status = getEventStatus(start, end, now)
       if (status === "Ongoing") return 0
       if (status === "Upcoming") return 1
       return 2
     }
 
-    const aStatus = getStatus(aStart)
-    const bStatus = getStatus(bStart)
+    const aEnd = new Date(a.eventEnd)
+    const bEnd = new Date(b.eventEnd)
+    const aStatus = getStatus(aStart, aEnd)
+    const bStatus = getStatus(bStart, bEnd)
 
     if (aStatus !== bStatus) return aStatus - bStatus
 
-    return (
-      getEventStartDay(aStart).getTime() - getEventStartDay(bStart).getTime()
-    )
+    return aStart.getTime() - bStart.getTime()
   })
 
   if (eventsList.length === 0) {
@@ -96,7 +93,10 @@ export function EventsList() {
           <Clickable>
             <Card>
               <CardHeader>
-                <EventBadge eventStart={event.eventStart} />
+                <EventBadge
+                  eventStart={event.eventStart}
+                  eventEnd={event.eventEnd}
+                />
                 <CardTitle className="mt-2 text-lg">
                   {event.eventName}
                 </CardTitle>

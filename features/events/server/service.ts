@@ -67,13 +67,20 @@ export const eventsService = {
 
   async updateEvent(userId: string, eventId: number, input: UpdateEventInput) {
     const event = await this.getEventById(userId, eventId)
-    const eventStatus = getEventStatus(event.eventStart)
+    const nextEventStart = input.eventStart ?? event.eventStart.toISOString()
+    const nextEventEnd = input.eventEnd ?? event.eventEnd.toISOString()
+    if (new Date(nextEventEnd) <= new Date(nextEventStart)) {
+      throw new ValidationError("eventEnd must be after eventStart")
+    }
+
+    const eventStatus = getEventStatus(event.eventStart, event.eventEnd)
     const isOnlyNameEditable =
       eventStatus === "Ongoing" || eventStatus === "Ended"
 
     if (isOnlyNameEditable) {
       const hasNonNameEdits =
         input.eventStart !== undefined ||
+        input.eventEnd !== undefined ||
         input.attendeeLimit !== undefined ||
         input.photoLimit !== undefined ||
         input.password !== undefined
@@ -192,7 +199,7 @@ export const eventsService = {
 
   async verifyPublicEventPassword(eventId: number, password: string) {
     const event = await this.getPublicEventById(eventId)
-    const eventStatus = getEventStatus(event.eventStart)
+    const eventStatus = getEventStatus(event.eventStart, event.eventEnd)
 
     if (eventStatus === "Upcoming") {
       throw new UnauthorizedError("This event is not open yet")
@@ -296,7 +303,7 @@ export const eventsService = {
     input: PublicPhotoCaptureInput & { file: Blob }
   ) {
     const event = await this.getPublicEventById(eventId)
-    const eventStatus = getEventStatus(event.eventStart)
+    const eventStatus = getEventStatus(event.eventStart, event.eventEnd)
 
     if (eventStatus !== "Ongoing") {
       throw new ConflictError("This event is not accepting photos right now")

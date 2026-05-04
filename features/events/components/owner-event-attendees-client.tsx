@@ -86,7 +86,11 @@ export function OwnerEventAttendeesClient({ eventId }: { eventId: number }) {
 
   return (
     <div className="flex flex-col gap-8">
-      <EventPageHeader eventStart={event.eventStart} eventName={event.eventName} />
+      <EventPageHeader
+        eventStart={event.eventStart}
+        eventEnd={event.eventEnd}
+        eventName={event.eventName}
+      />
 
       <section className="flex flex-col gap-3">
         {isAttendeesLoading || !attendees ? (

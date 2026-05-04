@@ -38,7 +38,7 @@ export default async function PublicEventCameraPage({
     redirect(`/events/${event.id}/public`)
   }
 
-  if (getEventStatus(event.eventStart) !== "Ongoing") {
+  if (getEventStatus(event.eventStart, event.eventEnd) !== "Ongoing") {
     redirect(`/events/${event.id}/public`)
   }
 

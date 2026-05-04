@@ -33,13 +33,19 @@ function PublicEventFrame({ children }: { children: ReactNode }) {
 function PublicEventEndedNotice({
   eventName,
   eventStart,
+  eventEnd,
 }: {
   eventName: string
   eventStart: string
+  eventEnd: string
 }) {
   return (
     <div className="flex w-full flex-col gap-8">
-      <EventPageHeader eventStart={eventStart} eventName={eventName} />
+      <EventPageHeader
+        eventStart={eventStart}
+        eventEnd={eventEnd}
+        eventName={eventName}
+      />
 
       <section className="flex w-full max-w-xs flex-col gap-2">
         <HugeiconsIcon
@@ -90,8 +96,9 @@ export default async function PublicEventPage({
     publicEventAccess.cookieName(event.id)
   )?.value
   const eventStart = event.eventStart.toISOString()
+  const eventEnd = event.eventEnd.toISOString()
   const now = new Date()
-  const eventStatus = getEventStatus(eventStart, now)
+  const eventStatus = getEventStatus(eventStart, eventEnd, now)
 
   if (eventStatus === "Upcoming") {
     return (
@@ -99,6 +106,7 @@ export default async function PublicEventPage({
         <PublicEventCountdown
           eventName={event.eventName}
           eventStart={eventStart}
+          eventEnd={eventEnd}
           initialNow={now.getTime()}
           targetAt={new Date(eventStart).getTime()}
         />
@@ -112,6 +120,7 @@ export default async function PublicEventPage({
         <PublicEventEndedNotice
           eventName={event.eventName}
           eventStart={eventStart}
+          eventEnd={eventEnd}
         />
       </PublicEventFrame>
     )
@@ -126,6 +135,7 @@ export default async function PublicEventPage({
           eventId={event.id}
           eventName={event.eventName}
           eventStart={eventStart}
+          eventEnd={eventEnd}
         />
       </PublicEventFrame>
     )
@@ -137,6 +147,7 @@ export default async function PublicEventPage({
     <PublicEventFrame>
       <EventPageHeader
         eventStart={eventStart}
+        eventEnd={eventEnd}
         eventName={event.eventName}
         titleTag="h1"
       />

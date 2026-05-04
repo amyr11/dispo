@@ -47,6 +47,7 @@ export default async function EventGalleryPage({
           <PublicGalleryRevealCountdown
             eventName={event.eventName}
             eventStart={event.eventStart.toISOString()}
+            eventEnd={event.eventEnd.toISOString()}
             revealAt={event.revealAt.toISOString()}
             initialNow={now.getTime()}
           />
@@ -63,6 +64,7 @@ export default async function EventGalleryPage({
             eventId={event.id}
             eventName={event.eventName}
             eventStart={event.eventStart.toISOString()}
+            eventEnd={event.eventEnd.toISOString()}
           />
         </div>
       </div>
@@ -76,6 +78,7 @@ export default async function EventGalleryPage({
       <div className="my-20 flex w-full max-w-lg flex-col px-4 sm:max-w-2xl">
         <EventPageHeader
           eventStart={event.eventStart.toISOString()}
+          eventEnd={event.eventEnd.toISOString()}
           eventName={event.eventName}
           titleTag="h1"
         />

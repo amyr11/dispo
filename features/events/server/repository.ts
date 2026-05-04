@@ -39,6 +39,7 @@ export const eventsRepository = {
         userId,
         eventName: input.eventName,
         eventStart: new Date(input.eventStart),
+        eventEnd: new Date(input.eventEnd),
         revealAt,
         attendeeLimit: input.attendeeLimit,
         photoLimit: input.photoLimit,
@@ -58,6 +59,7 @@ export const eventsRepository = {
       data: {
         ...(input.eventName ? { eventName: input.eventName } : {}),
         ...(input.eventStart ? { eventStart: new Date(input.eventStart) } : {}),
+        ...(input.eventEnd ? { eventEnd: new Date(input.eventEnd) } : {}),
         ...(typeof input.attendeeLimit === "number"
           ? { attendeeLimit: input.attendeeLimit }
           : {}),

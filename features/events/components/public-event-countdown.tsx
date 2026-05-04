@@ -9,6 +9,7 @@ import { formatDate } from "@/lib/utils/date-utils"
 type PublicEventCountdownProps = {
   eventName: string
   eventStart: string
+  eventEnd: string
   initialNow: number
   targetAt: number
 }
@@ -16,6 +17,7 @@ type PublicEventCountdownProps = {
 export function PublicEventCountdown({
   eventName,
   eventStart,
+  eventEnd,
   initialNow,
   targetAt,
 }: PublicEventCountdownProps) {
@@ -26,7 +28,11 @@ export function PublicEventCountdown({
 
   return (
     <div className="flex w-full flex-col gap-8">
-      <EventPageHeader eventStart={eventStart} eventName={eventName} />
+      <EventPageHeader
+        eventStart={eventStart}
+        eventEnd={eventEnd}
+        eventName={eventName}
+      />
 
       <CountdownPanel
         targetAt={targetAt}

@@ -20,6 +20,7 @@ type PublicEventPasswordFormProps = {
   eventId: number
   eventName: string
   eventStart: string
+  eventEnd: string
 }
 
 type JoinStep = "password" | "nickname"
@@ -35,6 +36,7 @@ export function PublicEventPasswordForm({
   eventId,
   eventName,
   eventStart,
+  eventEnd,
 }: PublicEventPasswordFormProps) {
   const router = useRouter()
   const [step, setStep] = useState<JoinStep>("password")
@@ -114,7 +116,11 @@ export function PublicEventPasswordForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex w-full flex-col gap-8">
-      <EventPageHeader eventStart={eventStart} eventName={eventName} />
+      <EventPageHeader
+        eventStart={eventStart}
+        eventEnd={eventEnd}
+        eventName={eventName}
+      />
 
       <div className="flex w-full max-w-sm flex-col gap-4">
         <div className="flex flex-col gap-2">

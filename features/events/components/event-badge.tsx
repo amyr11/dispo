@@ -28,10 +28,11 @@ const statusConfig: Record<
 
 interface EventBadgeProps {
   eventStart: Date | string
+  eventEnd: Date | string
 }
 
-export default function EventBadge({ eventStart }: EventBadgeProps) {
-  const status = getEventStatus(eventStart)
+export default function EventBadge({ eventStart, eventEnd }: EventBadgeProps) {
+  const status = getEventStatus(eventStart, eventEnd)
   const { label, variant, dotClass } = statusConfig[status]
 
   return (

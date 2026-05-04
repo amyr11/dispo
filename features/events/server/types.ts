@@ -4,6 +4,7 @@ export type EventRecord = {
   createdAt: Date
   eventName: string
   eventStart: Date
+  eventEnd: Date
   revealAt: Date
   attendeeLimit: number
   photoLimit: number
@@ -20,6 +21,7 @@ export type AttendeeRecord = {
 export type CreateEventInput = {
   eventName: string
   eventStart: string
+  eventEnd: string
   attendeeLimit: number
   photoLimit: number
   password: string

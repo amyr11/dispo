@@ -82,10 +82,17 @@ function asBlob(value: unknown, field: string): Blob {
 
 export function parseCreateEventInput(payload: unknown): CreateEventInput {
   const input = (payload ?? {}) as Record<string, unknown>
+  const eventStart = asISODate(input.eventStart, "eventStart")
+  const eventEnd = asISODate(input.eventEnd, "eventEnd")
+
+  if (new Date(eventEnd) <= new Date(eventStart)) {
+    throw new ValidationError("eventEnd must be after eventStart")
+  }
 
   return {
     eventName: asString(input.eventName, "eventName"),
-    eventStart: asISODate(input.eventStart, "eventStart"),
+    eventStart,
+    eventEnd,
     attendeeLimit: asPositiveInt(input.attendeeLimit, "attendeeLimit"),
     photoLimit: asPositiveInt(input.photoLimit, "photoLimit"),
     password: asString(input.password, "password"),
@@ -97,9 +104,18 @@ export function parseUpdateEventInput(payload: unknown): UpdateEventInput {
   const parsed: UpdateEventInput = {
     eventName: asOptionalString(input.eventName, "eventName"),
     eventStart: asOptionalISODate(input.eventStart, "eventStart"),
+    eventEnd: asOptionalISODate(input.eventEnd, "eventEnd"),
     attendeeLimit: asOptionalPositiveInt(input.attendeeLimit, "attendeeLimit"),
     photoLimit: asOptionalPositiveInt(input.photoLimit, "photoLimit"),
     password: asOptionalString(input.password, "password"),
+  }
+
+  if (
+    parsed.eventStart !== undefined &&
+    parsed.eventEnd !== undefined &&
+    new Date(parsed.eventEnd) <= new Date(parsed.eventStart)
+  ) {
+    throw new ValidationError("eventEnd must be after eventStart")
   }
 
   if (Object.values(parsed).every((value) => value === undefined)) {

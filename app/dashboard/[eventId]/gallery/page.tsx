@@ -68,6 +68,7 @@ export default async function OwnerEventGalleryPage({
           <PublicGalleryRevealCountdown
             eventName={event.eventName}
             eventStart={event.eventStart.toISOString()}
+            eventEnd={event.eventEnd.toISOString()}
             revealAt={event.revealAt.toISOString()}
             initialNow={now.getTime()}
           />
@@ -89,6 +90,7 @@ export default async function OwnerEventGalleryPage({
         </div>
         <EventPageHeader
           eventStart={event.eventStart.toISOString()}
+          eventEnd={event.eventEnd.toISOString()}
           eventName={event.eventName}
           titleTag="h1"
         />

@@ -34,12 +34,29 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { getEventStatus } from "@/features/events/utils/event-status"
 
 type FormErrors = Partial<Record<keyof CreateEventInput, string>>
+function toDateTimeLocalValue(value: string | null | undefined): string {
+  if (!value) return ""
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ""
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return Number.isNaN(localDate.getTime())
+    ? ""
+    : localDate.toISOString().slice(0, 16)
+}
 
 function validate(form: CreateEventInput): FormErrors {
   const errors: FormErrors = {}
   if (!form.eventName.trim()) errors.eventName = "Event name is required."
-  if (!form.eventStart) errors.eventStart = "Event date is required."
+  if (!form.eventStart) errors.eventStart = "Event start date/time is required."
+  if (!form.eventEnd) errors.eventEnd = "Event end date/time is required."
   if (!form.password) errors.password = "Password is required."
+  if (form.eventStart && form.eventEnd) {
+    const start = new Date(form.eventStart)
+    const end = new Date(form.eventEnd)
+    if (end <= start) {
+      errors.eventEnd = "Event end must be after event start."
+    }
+  }
   if (!form.attendeeLimit || form.attendeeLimit <= 0) {
     errors.attendeeLimit = "Must be at least 1."
   } else if (form.attendeeLimit > DEFAULT_MAX_ATTENDEES) {
@@ -60,13 +77,15 @@ function validateNameOnly(form: Pick<CreateEventInput, "eventName">): FormErrors
 }
 
 export function EditEventDialog({ event }: { event: Event }) {
-  const normalizedEventStart = event.eventStart.slice(0, 10)
-  const eventStatus = getEventStatus(event.eventStart)
+  const normalizedEventStart = toDateTimeLocalValue(event.eventStart)
+  const normalizedEventEnd = toDateTimeLocalValue(event.eventEnd)
+  const eventStatus = getEventStatus(event.eventStart, event.eventEnd)
   const isOnlyNameEditable = eventStatus === "Ongoing" || eventStatus === "Ended"
 
   const initialForm: CreateEventInput = {
     eventName: event.eventName,
     eventStart: normalizedEventStart,
+    eventEnd: normalizedEventEnd,
     attendeeLimit: event.attendeeLimit,
     photoLimit: event.photoLimit,
     password: event.password ?? "",
@@ -92,6 +111,7 @@ export function EditEventDialog({ event }: { event: Event }) {
     return (
       form.eventName !== initialForm.eventName ||
       form.eventStart !== initialForm.eventStart ||
+      form.eventEnd !== initialForm.eventEnd ||
       form.attendeeLimit !== initialForm.attendeeLimit ||
       form.photoLimit !== initialForm.photoLimit ||
       form.password !== initialForm.password
@@ -171,16 +191,30 @@ export function EditEventDialog({ event }: { event: Event }) {
             </div>
 
             <div className="flex flex-col gap-1">
-              <Label>Event Date</Label>
+              <Label>Event Start</Label>
               <Input
                 name="eventStart"
-                type="date"
+                type="datetime-local"
                 value={form.eventStart}
                 onChange={handleChange}
                 disabled={isOnlyNameEditable}
               />
               {errors.eventStart && (
                 <p className="text-sm text-destructive">{errors.eventStart}</p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <Label>Event End</Label>
+              <Input
+                name="eventEnd"
+                type="datetime-local"
+                value={form.eventEnd}
+                onChange={handleChange}
+                disabled={isOnlyNameEditable}
+              />
+              {errors.eventEnd && (
+                <p className="text-sm text-destructive">{errors.eventEnd}</p>
               )}
             </div>
 
