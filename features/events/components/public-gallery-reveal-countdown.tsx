@@ -33,7 +33,10 @@ export function PublicGalleryRevealCountdown({
         targetAt={revealAtMs}
         initialNow={initialNow}
         title="Gallery reveal countdown"
-        description={`Photos unlock on ${formatDate(revealAt)}.`}
+        description={`Photos unlock on ${formatDate(
+          revealAt,
+          "MMMM d, yyyy h:mm a"
+        )}.`}
         onComplete={handleComplete}
       />
     </div>

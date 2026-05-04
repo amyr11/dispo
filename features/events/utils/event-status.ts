@@ -13,9 +13,11 @@ export function getEventStatus(
   eventStart: Date | string,
   now: Date = new Date()
 ): EventStatus {
-  const startDay = getEventStartDay(eventStart)
+  const startAt = new Date(eventStart)
+  const startDay = getEventStartDay(startAt)
   const today = getToday(now)
 
+  if (now < startAt) return "Upcoming"
   if (startDay > today) return "Upcoming"
   if (startDay.getTime() === today.getTime()) return "Ongoing"
   return "Ended"

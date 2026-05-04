@@ -4,6 +4,7 @@ import { useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { CountdownPanel } from "@/features/events/components/countdown-panel"
 import { EventPageHeader } from "@/features/events/components/event-page-header"
+import { formatDate } from "@/lib/utils/date-utils"
 
 type PublicEventCountdownProps = {
   eventName: string
@@ -31,7 +32,10 @@ export function PublicEventCountdown({
         targetAt={targetAt}
         initialNow={initialNow}
         title="Hold on to your cameras... 📸 💤"
-        description="You can join when the event is live."
+        description={`You can join when the event goes live on ${formatDate(
+          eventStart,
+          "MMMM d, yyyy h:mm a"
+        )}.`}
         onComplete={handleComplete}
       />
     </div>

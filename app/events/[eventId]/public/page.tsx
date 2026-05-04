@@ -17,7 +17,6 @@ import { parseEventId } from "@/features/events/server/params"
 import { publicEventAccess } from "@/features/events/server/public-access"
 import { eventsService } from "@/features/events/server/service"
 import {
-  getEventStartDay,
   getEventStatus,
 } from "@/features/events/utils/event-status"
 
@@ -101,7 +100,7 @@ export default async function PublicEventPage({
           eventName={event.eventName}
           eventStart={eventStart}
           initialNow={now.getTime()}
-          targetAt={getEventStartDay(eventStart).getTime()}
+          targetAt={new Date(eventStart).getTime()}
         />
       </PublicEventFrame>
     )
