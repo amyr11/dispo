@@ -153,6 +153,38 @@ export const eventsService = {
     }
   },
 
+  async getOwnerEventGallery(userId: string, eventId: number) {
+    const event = await this.getEventById(userId, eventId)
+    const photos = await eventsRepository.findOwnerPhotosByEventId(eventId, userId)
+
+    const photoItems = await Promise.all(
+      photos.map(async (photo) => ({
+        id: photo.id.toString(),
+        takenAt: photo.takenAt,
+        storagePath: photo.storagePath,
+        url: await eventsStorageProvider.createPublicPhotoAccessUrl(photo.storagePath),
+      }))
+    )
+
+    return {
+      event,
+      photos: photoItems,
+    }
+  },
+
+  async softDeleteOwnerEventPhoto(userId: string, eventId: number, photoId: string) {
+    const parsedPhotoId = BigInt(photoId)
+    const updatedRows = await eventsRepository.softDeletePhotoByIdAndEventIdAndUserId({
+      eventId,
+      photoId: parsedPhotoId,
+      userId,
+    })
+
+    if (updatedRows === 0) {
+      throw new NotFoundError("Photo not found")
+    }
+  },
+
   async verifyPublicEventPassword(eventId: number, password: string) {
     const event = await this.getPublicEventById(eventId)
     const eventStatus = getEventStatus(event.eventStart)
@@ -164,6 +196,16 @@ export const eventsService = {
     if (eventStatus === "Ended") {
       throw new UnauthorizedError("This event has ended")
     }
+
+    if (event.password !== password) {
+      throw new UnauthorizedError("Invalid event password")
+    }
+
+    return event
+  },
+
+  async verifyPublicGalleryPassword(eventId: number, password: string) {
+    const event = await this.getPublicEventById(eventId)
 
     if (event.password !== password) {
       throw new UnauthorizedError("Invalid event password")

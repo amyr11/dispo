@@ -104,6 +104,40 @@ export const eventsRepository = {
     `
   },
 
+  async findOwnerPhotosByEventId(
+    eventId: number,
+    userId: string
+  ): Promise<EventPhotoRecord[]> {
+    return prisma.$queryRaw<EventPhotoRecord[]>`
+      SELECT
+        p.id,
+        p."takenAt" AS "takenAt",
+        p."storagePath" AS "storagePath"
+      FROM photos p
+      INNER JOIN events e ON e.id = p."eventId"::int
+      WHERE p."eventId"::int = ${eventId}
+        AND e."user_id" = ${userId}::uuid
+        AND p.deleted = false
+      ORDER BY p."takenAt" ASC
+    `
+  },
+
+  async softDeletePhotoByIdAndEventIdAndUserId(input: {
+    eventId: number
+    photoId: bigint
+    userId: string
+  }) {
+    return prisma.$executeRaw`
+      UPDATE photos p
+      SET deleted = true
+      FROM events e
+      WHERE p.id = ${input.photoId}
+        AND p."eventId"::int = ${input.eventId}
+        AND e.id = p."eventId"::int
+        AND e."user_id" = ${input.userId}::uuid
+    `
+  },
+
   findAttendeeByEventIdAndFingerprint(eventId: number, fingerprint: string) {
     return prisma.attendee.findUnique({
       where: {

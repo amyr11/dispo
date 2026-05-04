@@ -24,6 +24,10 @@ function isPublicEventGalleryDownloadRoute(pathname: string): boolean {
   return /^\/events\/\d+\/gallery\/download\/?$/.test(pathname)
 }
 
+function isPublicEventGalleryApiRoute(pathname: string): boolean {
+  return /^\/api\/events\/\d+\/gallery\/verify\/?$/.test(pathname)
+}
+
 function isPublicEventApiRoute(pathname: string): boolean {
   return /^\/api\/events\/\d+\/public\/(verify|join)\/?$/.test(pathname)
 }
@@ -78,6 +82,7 @@ export async function updateSession(request: NextRequest) {
     isPublicEventCaptureRoute(pathname) ||
     isPublicEventGalleryRoute(pathname) ||
     isPublicEventGalleryDownloadRoute(pathname) ||
+    isPublicEventGalleryApiRoute(pathname) ||
     isPublicEventApiRoute(pathname)
 
   // Redirect to login ONLY if there is no user AND the route is NOT public

@@ -39,8 +39,6 @@ export function EventDashboardClient({ eventId }: { eventId: number }) {
   }
 
   const eventStatus = getEventStatus(event.eventStart)
-  const isRevealLocked = new Date() < new Date(event.revealAt)
-
   return (
     <div className="my-20 flex w-full max-w-lg flex-col px-4 sm:max-w-2xl">
       <div className="flex items-center justify-between">
@@ -77,8 +75,8 @@ export function EventDashboardClient({ eventId }: { eventId: number }) {
             />
           </Link>
         </Clickable>
-        <Clickable disabled={isRevealLocked}>
-          <Link href={`/events/${event.id}/gallery`}>
+        <Clickable>
+          <Link href={`/dashboard/${event.id}/gallery`}>
             <StatsCard
               icon={Camera01Icon}
               label="Shots taken"

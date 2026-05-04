@@ -28,6 +28,10 @@ export const publicEventAccess = {
     return `dispo_public_event_${eventId}`
   },
 
+  galleryCookieName(eventId: number) {
+    return `dispo_public_gallery_${eventId}`
+  },
+
   createToken,
 
   hasAccess(event: EventRecord, token?: string) {
