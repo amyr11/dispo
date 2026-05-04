@@ -24,6 +24,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createEvent } from "@/features/events/client/api"
+import { eventQueryKeys } from "@/features/events/client/query-keys"
 import { CreateEventInput } from "@/features/events/types/event-types"
 import {
   DEFAULT_MAX_ATTENDEES,
@@ -84,7 +85,7 @@ export function CreateEventDialog() {
   const mutation = useMutation({
     mutationFn: (input: CreateEventInput) => createEvent(input),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["events"] })
+      queryClient.invalidateQueries({ queryKey: eventQueryKeys.all })
       setOpen(false)
       setForm(EMPTY_FORM)
       setErrors({})

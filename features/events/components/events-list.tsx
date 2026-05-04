@@ -1,7 +1,8 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
-import { getEvents } from "@/features/events/client/api"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { getEvent, getEvents, getEventStats } from "@/features/events/client/api"
+import { eventQueryKeys } from "@/features/events/client/query-keys"
 import {
   Card,
   CardDescription,
@@ -18,9 +19,11 @@ import {
 } from "@/features/events/utils/event-status"
 
 export function EventsList() {
+  const queryClient = useQueryClient()
   const { data: eventsList = [] } = useQuery({
-    queryKey: ["events"],
+    queryKey: eventQueryKeys.list(),
     queryFn: getEvents,
+    staleTime: 2 * 60_000,
   })
 
   const now = new Date()
@@ -57,7 +60,22 @@ export function EventsList() {
   return (
     <div className="flex flex-col gap-3">
       {sortedEvents.map((event) => (
-        <Link href={`/dashboard/${event.id}`} key={event.id}>
+        <Link
+          href={`/dashboard/${event.id}`}
+          key={event.id}
+          onMouseEnter={() => {
+            void queryClient.prefetchQuery({
+              queryKey: eventQueryKeys.detail(event.id),
+              queryFn: () => getEvent(event.id),
+              staleTime: 2 * 60_000,
+            })
+            void queryClient.prefetchQuery({
+              queryKey: eventQueryKeys.stats(event.id),
+              queryFn: () => getEventStats(event.id),
+              staleTime: 30_000,
+            })
+          }}
+        >
           <Clickable>
             <Card>
               <CardHeader>

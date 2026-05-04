@@ -6,6 +6,7 @@ import Clickable from "@/components/ui/clickable"
 import EventBadge from "@/features/events/components/event-badge"
 import StatsCard from "@/features/events/components/stats-card"
 import { getEvent, getEventStats } from "@/features/events/client/api"
+import { eventQueryKeys } from "@/features/events/client/query-keys"
 import { formatDate } from "@/lib/utils/date-utils"
 import {
   ArrowLeft01Icon,
@@ -21,13 +22,15 @@ import { getEventStatus } from "@/features/events/utils/event-status"
 
 export function EventDashboardClient({ eventId }: { eventId: number }) {
   const { data: event, isLoading: isEventLoading } = useQuery({
-    queryKey: ["events", eventId],
+    queryKey: eventQueryKeys.detail(eventId),
     queryFn: () => getEvent(eventId),
+    staleTime: 2 * 60_000,
   })
 
   const { data: stats, isLoading: isStatsLoading } = useQuery({
-    queryKey: ["event-stats", eventId],
+    queryKey: eventQueryKeys.stats(eventId),
     queryFn: () => getEventStats(eventId),
+    staleTime: 30_000,
   })
 
   if (isEventLoading || !event || isStatsLoading || !stats) {

@@ -15,6 +15,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { deleteEvent } from "@/features/events/client/api"
+import { eventQueryKeys } from "@/features/events/client/query-keys"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 
@@ -25,7 +26,7 @@ export function DeleteEventDialog({ eventId }: { eventId: number }) {
   const mutation = useMutation({
     mutationFn: () => deleteEvent(eventId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["events"] })
+      queryClient.invalidateQueries({ queryKey: eventQueryKeys.all })
       router.push("/dashboard")
     },
   })
