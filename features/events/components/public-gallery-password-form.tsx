@@ -7,8 +7,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import EventBadge from "@/features/events/components/event-badge"
-import { formatDate } from "@/lib/utils/date-utils"
+import { EventPageHeader } from "@/features/events/components/event-page-header"
 
 type PublicGalleryPasswordFormProps = {
   eventId: number
@@ -62,11 +61,7 @@ export function PublicGalleryPasswordForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex w-full flex-col gap-8">
-      <header className="flex flex-col gap-2 border-b pb-8">
-        <EventBadge eventStart={eventStart} />
-        <p className="font-heading text-2xl font-semibold">{eventName}</p>
-        <p className="text-sm">{formatDate(eventStart)}</p>
-      </header>
+      <EventPageHeader eventStart={eventStart} eventName={eventName} />
 
       <div className="flex w-full max-w-sm flex-col gap-4">
         <div className="flex flex-col gap-2">

@@ -6,9 +6,9 @@ import {
   Camera01Icon,
   UserGroup02Icon,
 } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon, IconSvgElement } from "@hugeicons/react"
-import { Card } from "@/components/ui/card"
-import EventBadge from "@/features/events/components/event-badge"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { EventMetricCard } from "@/features/events/components/event-metric-card"
+import { EventPageHeader } from "@/features/events/components/event-page-header"
 import { PublicEventCountdown } from "@/features/events/components/public-event-countdown"
 import { PublicEventTakePhotosPanel } from "@/features/events/components/public-event-take-photos-panel"
 import { PublicEventPasswordForm } from "@/features/events/components/public-event-password-form"
@@ -20,29 +20,6 @@ import {
   getEventStartDay,
   getEventStatus,
 } from "@/features/events/utils/event-status"
-import { formatDate } from "@/lib/utils/date-utils"
-
-type PublicStatCardProps = {
-  icon: IconSvgElement
-  label: string
-  value: number
-  caption: string
-}
-
-function PublicStatCard({ icon, label, value, caption }: PublicStatCardProps) {
-  return (
-    <Card className="items-center gap-2 px-4 py-5 text-center">
-      <HugeiconsIcon icon={icon} className="size-4 text-muted-foreground" />
-      <p className="font-heading text-4xl leading-none font-semibold">
-        {value}
-      </p>
-      <div className="flex flex-col gap-0.5">
-        <p className="text-sm">{label}</p>
-        <p className="text-xs text-muted-foreground">{caption}</p>
-      </div>
-    </Card>
-  )
-}
 
 function PublicEventFrame({ children }: { children: ReactNode }) {
   return (
@@ -63,11 +40,7 @@ function PublicEventEndedNotice({
 }) {
   return (
     <div className="flex w-full flex-col gap-8">
-      <header className="flex flex-col gap-2 border-b pb-8">
-        <EventBadge eventStart={eventStart} />
-        <p className="font-heading text-2xl font-semibold">{eventName}</p>
-        <p className="text-sm">{formatDate(eventStart)}</p>
-      </header>
+      <EventPageHeader eventStart={eventStart} eventName={eventName} />
 
       <section className="flex w-full max-w-xs flex-col gap-2">
         <HugeiconsIcon
@@ -163,24 +136,20 @@ export default async function PublicEventPage({
 
   return (
     <PublicEventFrame>
-      <header className="flex flex-col gap-2 border-b pb-8">
-        <EventBadge eventStart={eventStart} />
-        <div className="flex flex-col gap-1">
-          <h1 className="font-heading text-2xl font-semibold">
-            {event.eventName}
-          </h1>
-          <p className="text-sm">{formatDate(eventStart)}</p>
-        </div>
-      </header>
+      <EventPageHeader
+        eventStart={eventStart}
+        eventName={event.eventName}
+        titleTag="h1"
+      />
 
       <section className="grid grid-cols-2 gap-3 py-8">
-        <PublicStatCard
+        <EventMetricCard
           icon={UserGroup02Icon}
           label="Attendees"
           value={stats.attendeesCount}
           caption={`Max. of ${event.attendeeLimit}`}
         />
-        <PublicStatCard
+        <EventMetricCard
           icon={Camera01Icon}
           label="Shots taken"
           value={stats.shotsCount}

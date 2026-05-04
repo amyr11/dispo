@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import Clickable from "@/components/ui/clickable"
-import EventBadge from "@/features/events/components/event-badge"
+import { CountdownPanel } from "@/features/events/components/countdown-panel"
+import { EventPageHeader } from "@/features/events/components/event-page-header"
 import StatsCard from "@/features/events/components/stats-card"
 import { getEvent, getEventStats } from "@/features/events/client/api"
 import { eventQueryKeys } from "@/features/events/client/query-keys"
@@ -60,11 +61,13 @@ export function EventDashboardClient({ eventId }: { eventId: number }) {
     staleTime: 30_000,
   })
 
+  const eventStatus = event ? getEventStatus(event.eventStart) : null
+  const isUpcoming = eventStatus === "Upcoming"
+
   if (isEventLoading || !event || isStatsLoading || !stats) {
     return <EventDashboardContentSkeleton />
   }
 
-  const eventStatus = getEventStatus(event.eventStart)
   return (
     <div className="my-20 flex w-full max-w-lg flex-col px-4 sm:max-w-2xl">
       <div className="flex items-center justify-between">
@@ -85,41 +88,57 @@ export function EventDashboardClient({ eventId }: { eventId: number }) {
           )}
         </div>
       </div>
-      <div className="flex flex-col gap-2 border-b py-8">
-        <EventBadge eventStart={event.eventStart} />
-        <p className="font-heading text-2xl">{event.eventName}</p>
-        <p className="text-sm">{formatDate(event.eventStart)}</p>
+      <div className="pt-8">
+        <EventPageHeader eventStart={event.eventStart} eventName={event.eventName} />
       </div>
-      <div className="flex flex-col gap-2 py-8 sm:flex-row">
-        <Clickable disabled={eventStatus === "Upcoming"}>
-          <Link href="#">
-            <StatsCard
-              icon={UserGroup02Icon}
-              label="Attendees"
-              value={stats.attendeesCount}
-              limit={event.attendeeLimit}
-            />
-          </Link>
-        </Clickable>
-        <Clickable>
-          <Link
-            href={`/dashboard/${event.id}/gallery`}
-            onMouseEnter={() => {
-              router.prefetch(`/dashboard/${event.id}/gallery`)
-            }}
-            onTouchStart={() => {
-              router.prefetch(`/dashboard/${event.id}/gallery`)
-            }}
-          >
-            <StatsCard
-              icon={Camera01Icon}
-              label="Shots taken"
-              value={stats.shotsCount}
-              limit={event.photoLimit * event.attendeeLimit}
-            />
-          </Link>
-        </Clickable>
-      </div>
+      {!isUpcoming && (
+        <div className="flex flex-col gap-2 py-8 sm:flex-row">
+          <Clickable>
+            <Link
+              href={`/dashboard/${event.id}/attendees`}
+              onMouseEnter={() => {
+                router.prefetch(`/dashboard/${event.id}/attendees`)
+              }}
+              onTouchStart={() => {
+                router.prefetch(`/dashboard/${event.id}/attendees`)
+              }}
+            >
+              <StatsCard
+                icon={UserGroup02Icon}
+                label="Attendees"
+                value={stats.attendeesCount}
+                limit={event.attendeeLimit}
+              />
+            </Link>
+          </Clickable>
+          <Clickable>
+            <Link
+              href={`/dashboard/${event.id}/gallery`}
+              onMouseEnter={() => {
+                router.prefetch(`/dashboard/${event.id}/gallery`)
+              }}
+              onTouchStart={() => {
+                router.prefetch(`/dashboard/${event.id}/gallery`)
+              }}
+            >
+              <StatsCard
+                icon={Camera01Icon}
+                label="Shots taken"
+                value={stats.shotsCount}
+                limit={event.photoLimit * event.attendeeLimit}
+              />
+            </Link>
+          </Clickable>
+        </div>
+      )}
+      {isUpcoming && (
+        <CountdownPanel
+          className="flex w-full max-w-md flex-col gap-5 py-8"
+          targetAt={new Date(event.eventStart).getTime()}
+          title="Countdown to event start"
+          description={`Stats unlock on ${formatDate(event.eventStart, "MMMM d, yyyy h:mm a")}.`}
+        />
+      )}
     </div>
   )
 }

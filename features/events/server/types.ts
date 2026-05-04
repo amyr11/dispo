@@ -49,3 +49,9 @@ export type EventPhotoRecord = {
   takenAt: Date
   storagePath: string
 }
+
+export type OwnerAttendeeSummaryRecord = {
+  nickname: string
+  joinedAt: Date
+  shotsTaken: number
+}

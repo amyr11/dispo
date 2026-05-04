@@ -3,4 +3,6 @@ export const eventQueryKeys = {
   list: () => [...eventQueryKeys.all, "list"] as const,
   detail: (eventId: number) => [...eventQueryKeys.all, "detail", eventId] as const,
   stats: (eventId: number) => [...eventQueryKeys.all, "stats", eventId] as const,
+  attendees: (eventId: number) =>
+    [...eventQueryKeys.all, "attendees", eventId] as const,
 }

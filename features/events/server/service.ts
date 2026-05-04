@@ -123,6 +123,11 @@ export const eventsService = {
     return { attendeesCount, shotsCount }
   },
 
+  async getOwnerAttendeeSummaries(userId: string, eventId: number) {
+    await this.getEventById(userId, eventId)
+    return eventsRepository.findOwnerAttendeeSummariesByEventId(eventId, userId)
+  },
+
   async getPublicEventStats(eventId: number) {
     await this.getPublicEventById(eventId)
 

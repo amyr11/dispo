@@ -111,3 +111,14 @@ export async function getEventStatsController(eventIdParam: string) {
     return toErrorResponse(error)
   }
 }
+
+export async function getOwnerAttendeesController(eventIdParam: string) {
+  try {
+    const userId = await getCurrentUserId()
+    const eventId = parseEventId(eventIdParam)
+    const attendees = await eventsService.getOwnerAttendeeSummaries(userId, eventId)
+    return NextResponse.json(attendees)
+  } catch (error) {
+    return toErrorResponse(error)
+  }
+}

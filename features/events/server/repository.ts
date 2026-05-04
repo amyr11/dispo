@@ -3,6 +3,7 @@ import {
   CreateEventInput,
   EventPhotoRecord,
   JoinPublicEventInput,
+  OwnerAttendeeSummaryRecord,
   PublicAttendeeCaptureState,
   UpdateEventInput,
 } from "@/features/events/server/types"
@@ -119,6 +120,27 @@ export const eventsRepository = {
         AND e."user_id" = ${userId}::uuid
         AND p.deleted = false
       ORDER BY p."takenAt" ASC
+    `
+  },
+
+  async findOwnerAttendeeSummariesByEventId(
+    eventId: number,
+    userId: string
+  ): Promise<OwnerAttendeeSummaryRecord[]> {
+    return prisma.$queryRaw<OwnerAttendeeSummaryRecord[]>`
+      SELECT
+        a.nickname AS "nickname",
+        a."joinedAt" AS "joinedAt",
+        COALESCE(COUNT(p.id), 0)::int AS "shotsTaken"
+      FROM attendees a
+      INNER JOIN events e ON e.id = a."eventId"
+      LEFT JOIN photos p
+        ON p."attendeeId" = a.id
+       AND p.deleted = false
+      WHERE a."eventId" = ${eventId}
+        AND e."user_id" = ${userId}::uuid
+      GROUP BY a.nickname, a."joinedAt"
+      ORDER BY a."joinedAt" ASC
     `
   },
 

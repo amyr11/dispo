@@ -5,6 +5,12 @@ type EventStats = {
   shotsCount: number
 }
 
+export type OwnerAttendeeSummary = {
+  nickname: string
+  joinedAt: string
+  shotsTaken: number
+}
+
 async function parseJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = await response.json().catch(() => ({ error: "Request failed" }))
@@ -68,4 +74,12 @@ export async function getEventStats(eventId: number): Promise<EventStats> {
     credentials: "include",
   })
   return parseJson<EventStats>(response)
+}
+
+export async function getOwnerAttendees(eventId: number): Promise<OwnerAttendeeSummary[]> {
+  const response = await fetch(`/api/events/${eventId}/attendees`, {
+    method: "GET",
+    credentials: "include",
+  })
+  return parseJson<OwnerAttendeeSummary[]>(response)
 }
