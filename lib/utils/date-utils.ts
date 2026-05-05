@@ -44,3 +44,22 @@ export function formatEventDateTimeRange(
 
   return `${format(start, "MMM d, h:mm a")} - ${format(end, "MMM d, h:mm a")}`
 }
+
+/**
+ * Returns the current local date-time in a format accepted by datetime-local inputs.
+ * Example: "2026-05-05T14:30"
+ */
+export function getCurrentLocalDateTimeValue(): string {
+  const now = new Date()
+  const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60_000)
+  return localDate.toISOString().slice(0, 16)
+}
+
+/**
+ * Checks whether a local date-time string is before the current local time.
+ */
+export function isPastLocalDateTime(value: string): boolean {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return false
+  return parsed < new Date()
+}

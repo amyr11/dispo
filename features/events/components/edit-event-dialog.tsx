@@ -32,6 +32,10 @@ import {
 } from "../constants/event-constants"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { getEventStatus } from "@/features/events/utils/event-status"
+import {
+  getCurrentLocalDateTimeValue,
+  isPastLocalDateTime,
+} from "@/lib/utils/date-utils"
 
 type FormErrors = Partial<Record<keyof CreateEventInput, string>>
 function toDateTimeLocalValue(value: string | null | undefined): string {
@@ -50,6 +54,12 @@ function validate(form: CreateEventInput): FormErrors {
   if (!form.eventStart) errors.eventStart = "Event start date/time is required."
   if (!form.eventEnd) errors.eventEnd = "Event end date/time is required."
   if (!form.password) errors.password = "Password is required."
+  if (form.eventStart && isPastLocalDateTime(form.eventStart)) {
+    errors.eventStart = "Event start cannot be in the past."
+  }
+  if (form.eventEnd && isPastLocalDateTime(form.eventEnd)) {
+    errors.eventEnd = "Event end cannot be in the past."
+  }
   if (form.eventStart && form.eventEnd) {
     const start = new Date(form.eventStart)
     const end = new Date(form.eventEnd)
@@ -77,6 +87,7 @@ function validateNameOnly(form: Pick<CreateEventInput, "eventName">): FormErrors
 }
 
 export function EditEventDialog({ event }: { event: Event }) {
+  const nowLocalDateTime = getCurrentLocalDateTimeValue()
   const normalizedEventStart = toDateTimeLocalValue(event.eventStart)
   const normalizedEventEnd = toDateTimeLocalValue(event.eventEnd)
   const eventStatus = getEventStatus(event.eventStart, event.eventEnd)
@@ -197,6 +208,7 @@ export function EditEventDialog({ event }: { event: Event }) {
                 type="datetime-local"
                 value={form.eventStart}
                 onChange={handleChange}
+                min={nowLocalDateTime}
                 disabled={isOnlyNameEditable}
               />
               {errors.eventStart && (
@@ -211,6 +223,7 @@ export function EditEventDialog({ event }: { event: Event }) {
                 type="datetime-local"
                 value={form.eventEnd}
                 onChange={handleChange}
+                min={form.eventStart || nowLocalDateTime}
                 disabled={isOnlyNameEditable}
               />
               {errors.eventEnd && (

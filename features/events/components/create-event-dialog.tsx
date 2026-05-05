@@ -31,6 +31,10 @@ import {
   DEFAULT_MAX_PHOTO_LIMIT,
 } from "../constants/event-constants"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import {
+  getCurrentLocalDateTimeValue,
+  isPastLocalDateTime,
+} from "@/lib/utils/date-utils"
 
 const EMPTY_FORM: CreateEventInput = {
   eventName: "",
@@ -61,6 +65,12 @@ function validate(form: CreateEventInput): FormErrors {
   if (!form.eventStart) errors.eventStart = "Event start date/time is required."
   if (!form.eventEnd) errors.eventEnd = "Event end date/time is required."
   if (!form.password) errors.password = "Password is required."
+  if (form.eventStart && isPastLocalDateTime(form.eventStart)) {
+    errors.eventStart = "Event start cannot be in the past."
+  }
+  if (form.eventEnd && isPastLocalDateTime(form.eventEnd)) {
+    errors.eventEnd = "Event end cannot be in the past."
+  }
   if (form.eventStart && form.eventEnd) {
     const start = new Date(form.eventStart)
     const end = new Date(form.eventEnd)
@@ -85,6 +95,7 @@ function validate(form: CreateEventInput): FormErrors {
 }
 
 export function CreateEventDialog() {
+  const nowLocalDateTime = getCurrentLocalDateTimeValue()
   const [open, setOpen] = useState(false)
   const [confirmClose, setConfirmClose] = useState(false)
   const [form, setForm] = useState<CreateEventInput>(EMPTY_FORM)
@@ -177,6 +188,7 @@ export function CreateEventDialog() {
                 type="datetime-local"
                 value={form.eventStart}
                 onChange={handleChange}
+                min={nowLocalDateTime}
               />
               {errors.eventStart && (
                 <p className="text-sm text-destructive">{errors.eventStart}</p>
@@ -190,6 +202,7 @@ export function CreateEventDialog() {
                 type="datetime-local"
                 value={form.eventEnd}
                 onChange={handleChange}
+                min={form.eventStart || nowLocalDateTime}
               />
               {errors.eventEnd && (
                 <p className="text-sm text-destructive">{errors.eventEnd}</p>
