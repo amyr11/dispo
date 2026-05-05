@@ -55,9 +55,9 @@ export default async function OwnerEventGalleryPage({
 
   if (now < event.revealAt) {
     return (
-      <div className="flex min-h-svh flex-col items-center bg-muted">
+      <div className="min-h-svh bg-muted">
         <Navbar />
-        <div className="my-20 flex w-full max-w-lg flex-col px-4 sm:max-w-2xl">
+        <div className="mx-auto flex w-full max-w-lg flex-col px-4 pt-24 pb-12 sm:max-w-2xl">
           <div className="mb-8 flex items-center gap-3">
             <Link href={`/dashboard/${event.id}`}>
               <Button variant="outline" size="icon">
@@ -79,9 +79,9 @@ export default async function OwnerEventGalleryPage({
   }
 
   return (
-    <div className="flex min-h-svh flex-col items-center bg-muted">
+    <div className="min-h-svh bg-muted">
       <Navbar />
-      <div className="my-20 flex w-full max-w-lg flex-col px-4 sm:max-w-2xl">
+      <div className="mx-auto flex w-full max-w-lg flex-col px-4 pt-24 pb-12 sm:max-w-2xl">
         <div className="mb-8 flex items-center gap-3">
           <Link href={`/dashboard/${event.id}`}>
             <Button variant="outline" size="icon">
@@ -97,7 +97,7 @@ export default async function OwnerEventGalleryPage({
           titleTag="h1"
         />
 
-        <section className="grid grid-cols-2 gap-3 py-8">
+        <section className="grid grid-cols-2 gap-3 pt-6 pb-3">
           <EventMetricCard
             icon={UserGroup02Icon}
             label="Attendees"

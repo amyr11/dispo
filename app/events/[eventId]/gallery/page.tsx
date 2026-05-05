@@ -87,7 +87,7 @@ export default async function EventGalleryPage({
           titleTag="h1"
         />
 
-        <section className="grid grid-cols-2 gap-3 py-8">
+        <section className="grid grid-cols-2 gap-3 pt-6 pb-3">
           <EventMetricCard
             icon={UserGroup02Icon}
             label="Attendees"

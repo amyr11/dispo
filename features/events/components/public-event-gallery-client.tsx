@@ -108,7 +108,7 @@ export function PublicEventGalleryClient({
   }
 
   return (
-    <section className="flex flex-col gap-6 py-8">
+    <section className="flex flex-col gap-6 pt-4 pb-8">
       <div className="relative min-h-[300px] overflow-hidden rounded-lg border bg-card sm:min-h-[420px]">
         {selected && !isSelectedPhotoLoaded ? (
           <Skeleton className="absolute inset-0 h-[300px] w-full sm:h-[420px]" />
@@ -148,7 +148,7 @@ export function PublicEventGalleryClient({
         </Button>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-2.5 overflow-x-auto pb-2">
         {photos.map((photo, index) => (
           <button
             type="button"
@@ -172,9 +172,9 @@ export function PublicEventGalleryClient({
         ))}
       </div>
 
-      <div className="flex flex-col items-center gap-3 pt-2 text-center">
+      <div className="flex flex-col items-center gap-3 pt-1 text-center">
         <p className="font-heading text-3xl">Cherish these memories!</p>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
           <Button
             type="button"
             variant="primary"

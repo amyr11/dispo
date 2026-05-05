@@ -153,7 +153,7 @@ export function OwnerEventGalleryClient({
   }
 
   return (
-    <section className="flex flex-col gap-6 py-8">
+    <section className="flex flex-col gap-6 pt-4 pb-8">
       <div className="relative min-h-[300px] overflow-hidden rounded-lg border bg-card sm:min-h-[420px]">
         {selected && !isSelectedPhotoLoaded ? (
           <Skeleton className="absolute inset-0 h-[300px] w-full sm:h-[420px]" />
@@ -193,7 +193,7 @@ export function OwnerEventGalleryClient({
         </Button>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-2.5 overflow-x-auto pb-2">
         {photos.map((photo, index) => (
           <button
             type="button"
@@ -217,7 +217,7 @@ export function OwnerEventGalleryClient({
         ))}
       </div>
 
-      <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
+      <div className="flex flex-col items-center gap-3 pt-1 sm:flex-row sm:justify-center">
         <Button
           type="button"
           variant="primary"

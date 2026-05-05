@@ -15,9 +15,9 @@ export function EventMetricCard({
   caption,
 }: EventMetricCardProps) {
   return (
-    <Card className="items-center gap-2 px-4 py-5 text-center">
+    <Card className="items-center gap-1.5 px-4 py-4 text-center">
       <HugeiconsIcon icon={icon} className="size-4 text-muted-foreground" />
-      <p className="font-heading text-4xl leading-none font-semibold">{value}</p>
+      <p className="font-heading text-3xl leading-none font-semibold">{value}</p>
       {caption ? (
         <div className="flex flex-col gap-0.5">
           <p className="text-sm">{label}</p>
