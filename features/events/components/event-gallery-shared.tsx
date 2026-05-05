@@ -17,12 +17,18 @@ type EventGallerySharedProps = {
   photos: EventGalleryPhoto[]
   cta?: ReactNode
   onSelectedPhotoChange?: (photo: EventGalleryPhoto | null) => void
+  isSelectionMode?: boolean
+  selectedPhotoIds?: Set<string>
+  onTogglePhotoSelection?: (photo: EventGalleryPhoto) => void
 }
 
 export function EventGalleryShared({
   photos,
   cta,
   onSelectedPhotoChange,
+  isSelectionMode = false,
+  selectedPhotoIds,
+  onTogglePhotoSelection,
 }: EventGallerySharedProps) {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [loadedPhotoIds, setLoadedPhotoIds] = useState<Record<string, boolean>>({})
@@ -101,10 +107,19 @@ export function EventGalleryShared({
           <button
             type="button"
             key={photo.id}
-            className={`shrink-0 overflow-hidden rounded-md border ${
+            className={`relative shrink-0 overflow-hidden rounded-md border ${
               selectedIndex === index ? "ring-2 ring-primary" : ""
+            } ${
+              isSelectionMode && selectedPhotoIds?.has(photo.id)
+                ? "ring-2 ring-destructive"
+                : ""
             }`}
-            onClick={() => setSelectedIndex(index)}
+            onClick={() => {
+              setSelectedIndex(index)
+              if (isSelectionMode) {
+                onTogglePhotoSelection?.(photo)
+              }
+            }}
             aria-label={`Select photo ${index + 1}`}
           >
             <Image
@@ -116,6 +131,11 @@ export function EventGalleryShared({
               className="h-16 w-16 object-cover sm:h-20 sm:w-20"
               unoptimized
             />
+            {isSelectionMode && selectedPhotoIds?.has(photo.id) ? (
+              <span className="absolute top-1 right-1 rounded bg-destructive px-1.5 py-0.5 text-[10px] font-medium text-destructive-foreground">
+                Selected
+              </span>
+            ) : null}
           </button>
         ))}
       </div>
