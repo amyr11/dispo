@@ -5,6 +5,7 @@ import { QRCodeCanvas, QRCodeSVG } from "qrcode.react"
 import {
   Copy01Icon,
   Download02Icon,
+  Clock01Icon,
   QrCode01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -17,12 +18,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { formatDate } from "@/lib/utils/date-utils"
+import { formatEventDateTimeRange } from "@/lib/utils/date-utils"
 
 type ShareEventDialogProps = {
   eventId: number
   eventName: string
   eventStart: string
+  eventEnd: string
 }
 
 const QR_CODE_DOWNLOAD_SIZE = 1024
@@ -59,6 +61,7 @@ export function ShareEventDialog({
   eventId,
   eventName,
   eventStart,
+  eventEnd,
 }: ShareEventDialogProps) {
   const qrRef = useRef<HTMLCanvasElement | null>(null)
   const [open, setOpen] = useState(false)
@@ -109,8 +112,9 @@ export function ShareEventDialog({
           <DialogTitle className="max-w-full font-heading text-xl leading-tight font-semibold break-words">
             {eventName}
           </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
-            {formatDate(eventStart)}
+          <DialogDescription className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <HugeiconsIcon icon={Clock01Icon} className="size-3.5" />
+            <span>{formatEventDateTimeRange(eventStart, eventEnd)}</span>
           </DialogDescription>
         </DialogHeader>
 

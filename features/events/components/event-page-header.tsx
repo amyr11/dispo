@@ -1,5 +1,7 @@
 import EventBadge from "@/features/events/components/event-badge"
-import { formatDate } from "@/lib/utils/date-utils"
+import { formatEventDateTimeRange } from "@/lib/utils/date-utils"
+import { Clock01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 
 type EventPageHeaderProps = {
   eventStart: string
@@ -23,7 +25,10 @@ export function EventPageHeader({
         <TitleTag className="font-heading text-2xl font-semibold">
           {eventName}
         </TitleTag>
-        <p className="text-sm">{formatDate(eventStart)}</p>
+        <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <HugeiconsIcon icon={Clock01Icon} className="size-3.5" />
+          <span>{formatEventDateTimeRange(eventStart, eventEnd)}</span>
+        </p>
       </div>
     </header>
   )

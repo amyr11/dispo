@@ -25,3 +25,22 @@ export function daysFromNow(date: Date | string, fmt?: string): number {
 
   return differenceInCalendarDays(parsed, new Date());
 }
+
+/**
+ * Formats event start/end into a compact range.
+ * Same day: "May 8, 7:00 PM - 10:30 PM"
+ * Different day: "May 8, 7:00 PM - May 9, 1:00 AM"
+ */
+export function formatEventDateTimeRange(
+  eventStart: string,
+  eventEnd: string
+): string {
+  const start = parseISO(eventStart)
+  const end = parseISO(eventEnd)
+
+  if (format(start, "yyyy-MM-dd") === format(end, "yyyy-MM-dd")) {
+    return `${format(start, "MMM d, h:mm a")} - ${format(end, "h:mm a")}`
+  }
+
+  return `${format(start, "MMM d, h:mm a")} - ${format(end, "MMM d, h:mm a")}`
+}

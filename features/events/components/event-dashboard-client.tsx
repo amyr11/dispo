@@ -86,6 +86,7 @@ export function EventDashboardClient({ eventId }: { eventId: number }) {
               eventId={event.id}
               eventName={event.eventName}
               eventStart={event.eventStart}
+              eventEnd={event.eventEnd}
             />
           )}
         </div>

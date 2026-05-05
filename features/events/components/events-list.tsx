@@ -10,10 +10,12 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { formatDate } from "@/lib/utils/date-utils"
+import { formatEventDateTimeRange } from "@/lib/utils/date-utils"
 import Link from "next/link"
 import EventBadge from "./event-badge"
 import Clickable from "@/components/ui/clickable"
+import { Clock01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import {
   type EventStatus,
   getEventStatus,
@@ -134,7 +136,15 @@ function EventSection({ title, events, queryClient }: EventSectionProps) {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">{event.eventName}</CardTitle>
-                <CardDescription>{formatDate(event.eventStart)}</CardDescription>
+                <CardDescription className="flex items-center gap-1.5">
+                  <HugeiconsIcon
+                    icon={Clock01Icon}
+                    className="size-3.5 text-muted-foreground"
+                  />
+                  <span>
+                    {formatEventDateTimeRange(event.eventStart, event.eventEnd)}
+                  </span>
+                </CardDescription>
               </CardHeader>
             </Card>
           </Clickable>
