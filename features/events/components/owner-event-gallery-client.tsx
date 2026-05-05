@@ -220,14 +220,14 @@ export function OwnerEventGalleryClient({
       <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
         <Button
           type="button"
-          variant="secondary"
+          variant="primary"
           onClick={handleDownloadAll}
           disabled={isDownloading}
         >
           <HugeiconsIcon icon={Download01Icon} size={16} />
           {isDownloading ? "Preparing ZIP..." : "Download all"}
         </Button>
-        <Button type="button" variant="secondary" onClick={handleCopyLink}>
+        <Button type="button" variant="primary" onClick={handleCopyLink}>
           <HugeiconsIcon icon={Copy01Icon} size={16} />
           {copyStatus === "copied" ? "Copied" : "Copy public gallery link"}
         </Button>

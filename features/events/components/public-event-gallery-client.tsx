@@ -177,14 +177,14 @@ export function PublicEventGalleryClient({
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
           <Button
             type="button"
-            variant="secondary"
+            variant="primary"
             onClick={handleDownloadAll}
             disabled={isDownloading}
           >
             <HugeiconsIcon icon={Download01Icon} size={16} />
             {isDownloading ? "Preparing ZIP..." : "Download all"}
           </Button>
-          <Button type="button" variant="secondary" onClick={handleCopyLink}>
+          <Button type="button" variant="primary" onClick={handleCopyLink}>
             <HugeiconsIcon icon={Copy01Icon} size={16} />
             {copyStatus === "copied" ? "Copied" : "Copy link"}
           </Button>
