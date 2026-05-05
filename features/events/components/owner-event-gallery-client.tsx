@@ -2,9 +2,15 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Copy01Icon, Delete02Icon, Download01Icon } from "@hugeicons/core-free-icons"
+import { ArrowDown01Icon, Copy01Icon, Delete02Icon, Download01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { copyText, EventGalleryShared, type EventGalleryPhoto } from "./event-gallery-shared"
 
 type OwnerEventGalleryClientProps = {
@@ -106,20 +112,36 @@ export function OwnerEventGalleryClient({
       photos={photos}
       onSelectedPhotoChange={(photo) => setSelectedPhotoId(photo?.id ?? null)}
       cta={
-        <div className="flex flex-col items-center gap-3 pt-1 sm:flex-row sm:justify-center">
-          <Button
-            type="button"
-            variant="default"
-            onClick={handleDownloadAll}
-            disabled={isDownloading}
-          >
-            <HugeiconsIcon icon={Download01Icon} size={16} />
-            {isDownloading ? "Preparing ZIP..." : "Download all"}
-          </Button>
-          <Button type="button" variant="default" onClick={handleCopyLink}>
-            <HugeiconsIcon icon={Copy01Icon} size={16} />
-            {copyStatus === "copied" ? "Copied" : "Copy public gallery link"}
-          </Button>
+        <div className="flex flex-row flex-nowrap items-center justify-center gap-3 pt-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="default">
+                Share
+                <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center">
+              <DropdownMenuItem
+                onSelect={(event) => {
+                  event.preventDefault()
+                  void handleDownloadAll()
+                }}
+                disabled={isDownloading}
+              >
+                <HugeiconsIcon icon={Download01Icon} size={16} />
+                {isDownloading ? "Preparing ZIP..." : "Download all"}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={(event) => {
+                  event.preventDefault()
+                  void handleCopyLink()
+                }}
+              >
+                <HugeiconsIcon icon={Copy01Icon} size={16} />
+                {copyStatus === "copied" ? "Copied" : "Copy public gallery link"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button type="button" variant="destructive" onClick={handleDeleteSelected} disabled={isDeleting}>
             <HugeiconsIcon icon={Delete02Icon} size={16} />
             {isDeleting ? "Deleting..." : "Delete selected photo"}
