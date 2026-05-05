@@ -12,6 +12,7 @@ import { EventPageHeader } from "@/features/events/components/event-page-header"
 import { PublicEventCountdown } from "@/features/events/components/public-event-countdown"
 import { PublicEventTakePhotosPanel } from "@/features/events/components/public-event-take-photos-panel"
 import { PublicEventPasswordForm } from "@/features/events/components/public-event-password-form"
+import { PublicNavbar } from "@/components/ui/public-navbar"
 import { NotFoundError, ValidationError } from "@/features/events/server/errors"
 import { parseEventId } from "@/features/events/server/params"
 import { publicEventAccess } from "@/features/events/server/public-access"
@@ -22,8 +23,9 @@ import {
 
 function PublicEventFrame({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-svh justify-center bg-muted">
-      <div className="my-20 flex w-full max-w-lg flex-col px-4 sm:max-w-2xl">
+    <div className="min-h-svh bg-muted">
+      <PublicNavbar />
+      <div className="mx-auto flex w-full max-w-lg flex-col px-4 pt-24 pb-12 sm:max-w-2xl">
         {children}
       </div>
     </div>

@@ -6,6 +6,7 @@ import { EventPageHeader } from "@/features/events/components/event-page-header"
 import { PublicEventGalleryClient } from "@/features/events/components/public-event-gallery-client"
 import { PublicGalleryPasswordForm } from "@/features/events/components/public-gallery-password-form"
 import { PublicGalleryRevealCountdown } from "@/features/events/components/public-gallery-reveal-countdown"
+import { PublicNavbar } from "@/components/ui/public-navbar"
 import { NotFoundError, ValidationError } from "@/features/events/server/errors"
 import { parseEventId } from "@/features/events/server/params"
 import { eventsService } from "@/features/events/server/service"
@@ -42,8 +43,9 @@ export default async function EventGalleryPage({
 
   if (now < event.revealAt) {
     return (
-      <div className="flex min-h-svh justify-center bg-muted">
-        <div className="my-20 flex w-full max-w-lg flex-col px-4 sm:max-w-2xl">
+      <div className="min-h-svh bg-muted">
+        <PublicNavbar />
+        <div className="mx-auto flex w-full max-w-lg flex-col px-4 pt-24 pb-12 sm:max-w-2xl">
           <PublicGalleryRevealCountdown
             eventName={event.eventName}
             eventStart={event.eventStart.toISOString()}
@@ -58,8 +60,9 @@ export default async function EventGalleryPage({
 
   if (!hasGalleryAccess) {
     return (
-      <div className="flex min-h-svh justify-center bg-muted">
-        <div className="my-20 flex w-full max-w-lg flex-col px-4 sm:max-w-2xl">
+      <div className="min-h-svh bg-muted">
+        <PublicNavbar />
+        <div className="mx-auto flex w-full max-w-lg flex-col px-4 pt-24 pb-12 sm:max-w-2xl">
           <PublicGalleryPasswordForm
             eventId={event.id}
             eventName={event.eventName}
@@ -74,8 +77,9 @@ export default async function EventGalleryPage({
   const stats = await eventsService.getPublicEventStats(eventIdNum)
 
   return (
-    <div className="flex min-h-svh justify-center bg-muted">
-      <div className="my-20 flex w-full max-w-lg flex-col px-4 sm:max-w-2xl">
+    <div className="min-h-svh bg-muted">
+      <PublicNavbar />
+      <div className="mx-auto flex w-full max-w-lg flex-col px-4 pt-24 pb-12 sm:max-w-2xl">
         <EventPageHeader
           eventStart={event.eventStart.toISOString()}
           eventEnd={event.eventEnd.toISOString()}
