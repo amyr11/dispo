@@ -17,12 +17,13 @@ export default async function OwnerEventAttendeesPage({
     <div className="flex min-h-svh flex-col items-center bg-muted">
       <Navbar />
       <div className="my-20 flex w-full max-w-lg flex-col px-4 sm:max-w-2xl">
-        <div className="mb-8">
+        <div className="mb-8 flex items-center gap-3">
           <Link href={`/dashboard/${eventIdNum}`}>
             <Button variant="outline" size="icon">
               <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
             </Button>
           </Link>
+          <p className="text-sm text-muted-foreground">Dashboard / Attendees</p>
         </div>
         <OwnerEventAttendeesClient eventId={eventIdNum} />
       </div>
