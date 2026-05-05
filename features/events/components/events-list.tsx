@@ -14,7 +14,10 @@ import { formatDate } from "@/lib/utils/date-utils"
 import Link from "next/link"
 import EventBadge from "./event-badge"
 import Clickable from "@/components/ui/clickable"
-import { getEventStatus } from "@/features/events/utils/event-status"
+import {
+  type EventStatus,
+  getEventStatus,
+} from "@/features/events/utils/event-status"
 
 export function EventsList() {
   const queryClient = useQueryClient()
@@ -42,26 +45,27 @@ export function EventsList() {
 
   const now = new Date()
 
-  const sortedEvents = [...eventsList].sort((a, b) => {
-    const aStart = new Date(a.eventStart)
-    const bStart = new Date(b.eventStart)
-
-    const getStatus = (start: Date, end: Date) => {
-      const status = getEventStatus(start, end, now)
-      if (status === "Ongoing") return 0
-      if (status === "Upcoming") return 1
-      return 2
-    }
-
-    const aEnd = new Date(a.eventEnd)
-    const bEnd = new Date(b.eventEnd)
-    const aStatus = getStatus(aStart, aEnd)
-    const bStatus = getStatus(bStart, bEnd)
-
-    if (aStatus !== bStatus) return aStatus - bStatus
-
-    return aStart.getTime() - bStart.getTime()
-  })
+  const ongoingEvents = eventsList
+    .filter(
+    (event) =>
+      getEventStatus(new Date(event.eventStart), new Date(event.eventEnd), now) ===
+      "Ongoing"
+  )
+    .sort((a, b) => new Date(b.eventStart).getTime() - new Date(a.eventStart).getTime())
+  const upcomingEvents = eventsList
+    .filter(
+    (event) =>
+      getEventStatus(new Date(event.eventStart), new Date(event.eventEnd), now) ===
+      "Upcoming"
+  )
+    .sort((a, b) => new Date(b.eventStart).getTime() - new Date(a.eventStart).getTime())
+  const endedEvents = eventsList
+    .filter(
+    (event) =>
+      getEventStatus(new Date(event.eventStart), new Date(event.eventEnd), now) ===
+      "Ended"
+  )
+    .sort((a, b) => new Date(b.eventStart).getTime() - new Date(a.eventStart).getTime())
 
   if (eventsList.length === 0) {
     return (
@@ -73,7 +77,43 @@ export function EventsList() {
 
   return (
     <div className="flex flex-col gap-3">
-      {sortedEvents.map((event) => (
+      <EventSection
+        title="Ongoing"
+        events={ongoingEvents}
+        queryClient={queryClient}
+      />
+      <EventSection
+        title="Upcoming"
+        events={upcomingEvents}
+        queryClient={queryClient}
+      />
+      <EventSection
+        title="Ended"
+        events={endedEvents}
+        queryClient={queryClient}
+      />
+    </div>
+  )
+}
+
+type EventSectionProps = {
+  title: EventStatus
+  events: Array<{
+    id: number
+    eventName: string
+    eventStart: string
+    eventEnd: string
+  }>
+  queryClient: ReturnType<typeof useQueryClient>
+}
+
+function EventSection({ title, events, queryClient }: EventSectionProps) {
+  if (events.length === 0) return null
+
+  return (
+    <section className="flex flex-col gap-3">
+      <EventBadge status={title} />
+      {events.map((event) => (
         <Link
           href={`/dashboard/${event.id}`}
           key={event.id}
@@ -93,21 +133,13 @@ export function EventsList() {
           <Clickable>
             <Card>
               <CardHeader>
-                <EventBadge
-                  eventStart={event.eventStart}
-                  eventEnd={event.eventEnd}
-                />
-                <CardTitle className="mt-2 text-lg">
-                  {event.eventName}
-                </CardTitle>
-                <CardDescription>
-                  {formatDate(event.eventStart)}
-                </CardDescription>
+                <CardTitle className="text-lg">{event.eventName}</CardTitle>
+                <CardDescription>{formatDate(event.eventStart)}</CardDescription>
               </CardHeader>
             </Card>
           </Clickable>
         </Link>
       ))}
-    </div>
+    </section>
   )
 }

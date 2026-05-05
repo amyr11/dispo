@@ -27,13 +27,25 @@ const statusConfig: Record<
 }
 
 interface EventBadgeProps {
-  eventStart: Date | string
-  eventEnd: Date | string
+  eventStart?: Date | string
+  eventEnd?: Date | string
+  status?: EventStatus
 }
 
-export default function EventBadge({ eventStart, eventEnd }: EventBadgeProps) {
-  const status = getEventStatus(eventStart, eventEnd)
-  const { label, variant, dotClass } = statusConfig[status]
+export default function EventBadge({
+  eventStart,
+  eventEnd,
+  status,
+}: EventBadgeProps) {
+  const resolvedStatus =
+    status ??
+    (eventStart !== undefined && eventEnd !== undefined
+      ? getEventStatus(eventStart, eventEnd)
+      : null)
+
+  if (!resolvedStatus) return null
+
+  const { label, variant, dotClass } = statusConfig[resolvedStatus]
 
   return (
     <Badge variant={variant} className="flex items-center gap-1.5">
