@@ -12,7 +12,7 @@ export default function Clickable({
   return (
     <div
       className={cn(
-        "w-full cursor-pointer transition-all hover:scale-102 active:scale-98",
+        "w-full cursor-pointer transition-all hover:scale-102",
         disabled && "pointer-events-none opacity-50",
         className
       )}
