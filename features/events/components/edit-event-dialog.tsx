@@ -48,6 +48,18 @@ function toDateTimeLocalValue(value: string | null | undefined): string {
     : localDate.toISOString().slice(0, 16)
 }
 
+function getRevealDateTimeLocalValue(eventEnd: string): string {
+  if (!eventEnd) return ""
+  const eventEndDate = new Date(eventEnd)
+  if (Number.isNaN(eventEndDate.getTime())) return ""
+  const revealDate = new Date(eventEndDate.getTime() + 12 * 60 * 60 * 1000)
+  if (Number.isNaN(revealDate.getTime())) return ""
+  const localDate = new Date(
+    revealDate.getTime() - revealDate.getTimezoneOffset() * 60_000
+  )
+  return localDate.toISOString().slice(0, 16)
+}
+
 function validate(form: CreateEventInput): FormErrors {
   const errors: FormErrors = {}
   if (!form.eventName.trim()) errors.eventName = "Event name is required."
@@ -80,7 +92,9 @@ function validate(form: CreateEventInput): FormErrors {
   return errors
 }
 
-function validateNameOnly(form: Pick<CreateEventInput, "eventName">): FormErrors {
+function validateNameOnly(
+  form: Pick<CreateEventInput, "eventName">
+): FormErrors {
   const errors: FormErrors = {}
   if (!form.eventName.trim()) errors.eventName = "Event name is required."
   return errors
@@ -91,7 +105,8 @@ export function EditEventDialog({ event }: { event: Event }) {
   const normalizedEventStart = toDateTimeLocalValue(event.eventStart)
   const normalizedEventEnd = toDateTimeLocalValue(event.eventEnd)
   const eventStatus = getEventStatus(event.eventStart, event.eventEnd)
-  const isOnlyNameEditable = eventStatus === "Ongoing" || eventStatus === "Ended"
+  const isOnlyNameEditable =
+    eventStatus === "Ongoing" || eventStatus === "Ended"
 
   const initialForm: CreateEventInput = {
     eventName: event.eventName,
@@ -110,7 +125,8 @@ export function EditEventDialog({ event }: { event: Event }) {
   const queryClient = useQueryClient()
 
   const mutation = useMutation({
-    mutationFn: (input: Partial<CreateEventInput>) => updateEvent(event.id, input),
+    mutationFn: (input: Partial<CreateEventInput>) =>
+      updateEvent(event.id, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: eventQueryKeys.all })
       setOpen(false)
@@ -229,6 +245,18 @@ export function EditEventDialog({ event }: { event: Event }) {
               {errors.eventEnd && (
                 <p className="text-sm text-destructive">{errors.eventEnd}</p>
               )}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <Label>Reveal Date</Label>
+              <Input
+                type="datetime-local"
+                value={getRevealDateTimeLocalValue(form.eventEnd)}
+                disabled
+              />
+              <p className="text-xs text-muted-foreground">
+                12 hours after event end.
+              </p>
             </div>
 
             <div className="flex flex-col gap-1">

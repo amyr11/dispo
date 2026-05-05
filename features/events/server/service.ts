@@ -15,10 +15,9 @@ import {
 } from "@/features/events/server/types"
 import { getEventStatus } from "@/features/events/utils/event-status"
 
-function computeRevealAt(eventStartIso: string): Date {
-  const revealAt = new Date(eventStartIso)
-  revealAt.setDate(revealAt.getDate() + 1)
-  revealAt.setHours(12, 0, 0, 0)
+function computeRevealAt(eventEndIso: string): Date {
+  const revealAt = new Date(eventEndIso)
+  revealAt.setHours(revealAt.getHours() + 12)
   return revealAt
 }
 
@@ -56,7 +55,7 @@ export const eventsService = {
     return eventsRepository.createForUser(
       userId,
       input,
-      computeRevealAt(input.eventStart)
+      computeRevealAt(input.eventEnd)
     )
   },
 
@@ -95,7 +94,7 @@ export const eventsService = {
       eventId,
       userId,
       input,
-      input.eventStart ? computeRevealAt(input.eventStart) : undefined
+      computeRevealAt(nextEventEnd)
     )
 
     if (result.count === 0) {
