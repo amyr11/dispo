@@ -20,6 +20,20 @@ async function parseJson<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>
 }
 
+function toUtcIsoString(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toISOString()
+}
+
+function normalizeEventDateTimes<T extends Partial<CreateEventInput>>(input: T): T {
+  return {
+    ...input,
+    ...(input.eventStart ? { eventStart: toUtcIsoString(input.eventStart) } : {}),
+    ...(input.eventEnd ? { eventEnd: toUtcIsoString(input.eventEnd) } : {}),
+  }
+}
+
 export async function getEvents(): Promise<Event[]> {
   const response = await fetch("/api/events", {
     method: "GET",
@@ -37,25 +51,27 @@ export async function getEvent(eventId: number): Promise<Event> {
 }
 
 export async function createEvent(input: CreateEventInput): Promise<Event> {
+  const payload = normalizeEventDateTimes(input)
   const response = await fetch("/api/events", {
     method: "POST",
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(input),
+    body: JSON.stringify(payload),
   })
   return parseJson<Event>(response)
 }
 
 export async function updateEvent(eventId: number, input: Partial<CreateEventInput>): Promise<Event> {
+  const payload = normalizeEventDateTimes(input)
   const response = await fetch(`/api/events/${eventId}`, {
     method: "PATCH",
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(input),
+    body: JSON.stringify(payload),
   })
   return parseJson<Event>(response)
 }
