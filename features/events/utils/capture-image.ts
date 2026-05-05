@@ -631,8 +631,8 @@ function applyDisposableFilmEffect(
     context.restore()
   }
 
-  // Apply burns before pixel-level tone mapping so they obey highlight clipping.
-  drawEdgeLightBurns(context, width, height, profile.seed)
+  // Light burns temporarily disabled.
+  // drawEdgeLightBurns(context, width, height, profile.seed)
 
   const imageData = context.getImageData(0, 0, width, height)
   const data = imageData.data
